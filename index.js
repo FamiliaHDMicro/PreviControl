@@ -1,17 +1,15 @@
-// ConsultaRápida — Worker backend
-// Serviço: landing page (assets) + API REST (/api/*) + painel admin (/admin)
-// Integrações: JARVIS (Workers AI), Telegram bot, D1, R2 (futuro)
+// index.js — PrevControl Worker
+// Dois caminhos de entrada: formulário tradicional (/api/triagem) e Jarvis conversacional (/api/jarvis)
+// Ambos alimentam a mesma tabela `leads`, vista no painel admin (/api/admin/leads).
 
-import { getAllBenefits, getBenefitConfig, runTriagem, CLASSIFICATION_LABELS, STATUS_LABELS } from "./rules.js";
-import { chatWithJarvis } from "./jarvis.js";
-import { handleTelegramWebhook, notifyCleitonFile, setupTelegramWebhook } from "./telegram.js";
+import { getAllBenefits, getBenefitConfig, runTriagem, CLASSIFICATION_LABELS } from "./rules.js";
+import { chatWithJarvis, gerarLinkWhatsApp } from "./jarvis.js";
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    // ---- CORS (dev) ----
     const corsHeaders = {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
@@ -21,35 +19,18 @@ export default {
       return new Response(null, { headers: corsHeaders });
     }
 
-    // ---- Rotas da API ----
-
-    // Benefícios (lista perguntas para o formulário)
+    // ---- Formulário tradicional ----
     if (path === "/api/benefits" && request.method === "GET") {
       return json({ benefits: getAllBenefits() }, corsHeaders);
     }
 
-    // Triagem (formulário da landing page)
     if (path === "/api/triagem" && request.method === "POST") {
-      return handleTriagem(request, env, ctx, corsHeaders);
+      return handleTriagem(request, env, corsHeaders);
     }
 
-    // Chat JARVIS (IA especializada)
-    if (path === "/api/chat" && request.method === "POST") {
-      return handleChat(request, env, corsHeaders);
-    }
-
-    // Telegram webhook (recebe mensagens do bot)
-    if (path === "/api/telegram/webhook" && request.method === "POST") {
-      return handleTelegramWebhook(request, env);
-    }
-
-    // Telegram setup (ativa webhook — chamado uma vez)
-    if (path === "/api/telegram/setup" && request.method === "POST") {
-      return handleAdminAuth(request, env, async () => {
-        const workerUrl = url.origin;
-        const result = await setupTelegramWebhook(env, workerUrl);
-        return json(result, corsHeaders);
-      }, corsHeaders);
+    // ---- Jarvis conversacional ----
+    if (path === "/api/jarvis" && request.method === "POST") {
+      return handleJarvis(request, env, corsHeaders);
     }
 
     // ---- Painel admin (protegido por token) ----
@@ -86,7 +67,7 @@ export default {
       }, corsHeaders);
     }
 
-    // ---- Fallback: servir assets (landing page, painel) ----
+    // ---- Fallback: servir assets (landing page) ----
     if (env.ASSETS) {
       return env.ASSETS.fetch(request);
     }
@@ -94,9 +75,8 @@ export default {
   },
 };
 
-// ---- Handlers ----
-
-async function handleTriagem(request, env, ctx, corsHeaders) {
+// ---- Handler: formulário tradicional ----
+async function handleTriagem(request, env, corsHeaders) {
   try {
     const body = await request.json();
     const { name, phone, email, benefit_type, answers, cep } = body;
@@ -111,44 +91,12 @@ async function handleTriagem(request, env, ctx, corsHeaders) {
     }
 
     const result = runTriagem(benefit_type, answers);
+    const leadId = await salvarLead(env, { name, phone, email, benefit_type, answers, cep, result });
 
-    // Salvar lead no banco — file, provavel_direito e precisa_avaliacao chegam ao painel
-    // sem_direito é salva para métricas mas não aparece no painel principal
-    const stmt = env.DB.prepare(
-      `INSERT INTO leads (name, phone, email, benefit_type, answers_json, classification, rationale, cep)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-    ).bind(
-      name, phone, email || null, benefit_type,
-      JSON.stringify(answers), result.class, result.rationale, cep || null
+    const waLink = gerarLinkWhatsApp(
+      env, name, config.label,
+      { classification: result.class, classification_label: CLASSIFICATION_LABELS[result.class], rationale: result.rationale }
     );
-    const insertResult = await stmt.run();
-    const leadId = insertResult.meta.last_row_id;
-
-    // Se for FILÉ, notifica o Cleiton via Telegram (assíncrono, não bloqueia resposta)
-    if (result.class === "file") {
-      ctx.waitUntil(notifyCleitonFile(env, {
-        id: leadId,
-        name,
-        phone,
-        benefit_label: config.label,
-      }));
-    }
-
-    // Monta link de WhatsApp pré-preenchido para casos qualificados
-    const waMsg = encodeURIComponent(
-      `Olá! Sou ${name}. Fiz a triagem no site (${config.label}) e o resultado foi: ${CLASSIFICATION_LABELS[result.class]}. Gostaria de falar com o especialista.`
-    );
-    const waLink = result.class !== "sem_direito"
-      ? `https://wa.me/${env.WHATSAPP_NUMBER}?text=${waMsg}`
-      : null;
-
-    // Para "sem direito" — oferece serviços de auditoria e advocacia
-    const semDireitoOffer = result.class === "sem_direito" ? {
-      title: "Mesmo sem direito a este benefício, você não está sozinho.",
-      message: "Podemos te ajudar de outras formas. Temos serviços de auditoria de documentos e parceria com escritórios de advocacia da sua região.",
-      cta: "Posso entrar em contato com você para conversar sobre outras opções?",
-      whatsapp_link: `https://wa.me/${env.WHATSAPP_NUMBER}?text=${encodeURIComponent(`Olá! Sou ${name}. Fiz a triagem e não me enquadrei no benefício, mas quero saber sobre auditoria e outras opções.`)}`,
-    } : null;
 
     return json({
       lead_id: leadId,
@@ -156,29 +104,67 @@ async function handleTriagem(request, env, ctx, corsHeaders) {
       classification_label: CLASSIFICATION_LABELS[result.class],
       rationale: result.rationale,
       whatsapp_link: waLink,
-      telegram_link: env.TELEGRAM_BOT_URL,
-      sem_direito_offer: semDireitoOffer,
     }, corsHeaders);
   } catch (e) {
     return json({ error: "Erro interno: " + e.message }, corsHeaders, 500);
   }
 }
 
-async function handleChat(request, env, corsHeaders) {
+// ---- Handler: Jarvis conversacional ----
+async function handleJarvis(request, env, corsHeaders) {
   try {
     const body = await request.json();
-    const { messages } = body;
+    const { messages, state, name, phone } = body;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return json({ error: "messages é obrigatório" }, corsHeaders, 400);
     }
+    if (!env.ANTHROPIC_API_KEY) {
+      return json({ error: "Jarvis ainda não configurado no servidor." }, corsHeaders, 500);
+    }
 
-    const reply = await chatWithJarvis(env, messages);
+    const { reply, state: novoEstado, resultado } = await chatWithJarvis(env, messages, state || {});
 
-    return json({ reply }, corsHeaders);
+    let waLink = null;
+    let leadId = null;
+
+    // Se a triagem foi concluída nesta troca, salva o lead e gera o link de WhatsApp
+    if (resultado && name && phone) {
+      const config = getBenefitConfig(novoEstado.benefit_type);
+      leadId = await salvarLead(env, {
+        name, phone, email: null,
+        benefit_type: novoEstado.benefit_type,
+        answers: novoEstado.answers,
+        cep: null,
+        result: { class: resultado.classification, rationale: resultado.rationale }
+      });
+      waLink = gerarLinkWhatsApp(env, name, config ? config.label : novoEstado.benefit_type, resultado);
+    }
+
+    return json({
+      reply,
+      state: novoEstado,
+      resultado,
+      lead_id: leadId,
+      whatsapp_link: waLink,
+    }, corsHeaders);
   } catch (e) {
-    return json({ error: "Erro ao processar chat: " + e.message }, corsHeaders, 500);
+    console.error("jarvis handler error:", e);
+    return json({ error: "Erro ao conversar com o Jarvis: " + e.message }, corsHeaders, 500);
   }
+}
+
+// ---- Utilitário: salva lead no D1 (usado tanto pelo formulário quanto pelo Jarvis) ----
+async function salvarLead(env, { name, phone, email, benefit_type, answers, cep, result }) {
+  const stmt = env.DB.prepare(
+    `INSERT INTO leads (name, phone, email, benefit_type, answers_json, classification, rationale, cep, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'novo')`
+  ).bind(
+    name, phone, email || null, benefit_type,
+    JSON.stringify(answers || {}), result.class, result.rationale, cep || null
+  );
+  const insertResult = await stmt.run();
+  return insertResult.meta.last_row_id;
 }
 
 async function handleAdminAuth(request, env, handler, corsHeaders) {
