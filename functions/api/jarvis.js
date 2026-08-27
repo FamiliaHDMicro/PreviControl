@@ -1,32 +1,48 @@
-// Cloudflare Pages Function — POST /api/jarvis
-// Endpoint do chat "Pergunte ao Jarvis" da landing page do Escritório Cleiton.
-//
-// COMO CONFIGURAR:
-// 1. No painel do Cloudflare Pages do seu projeto, vá em:
-//    Settings > Environment variables > Add variable
-// 2. Crie uma variável chamada ANTHROPIC_API_KEY, tipo "Secret" (encrypted),
-//    e cole sua API key da Anthropic (começa com sk-ant-...).
-// 3. Faça isso tanto em Production quanto em Preview.
-// 4. Em Settings > Functions > D1 database bindings, garanta que existe um
-//    binding chamado DB apontando pro banco prevcontrole-db.
-// 5. Salve este arquivo em: functions/api/jarvis.js na raiz do seu projeto
-//    (mesma pasta onde já ficam as outras functions/api do site).
-// 6. Suba pro GitHub — o Cloudflare Pages faz o deploy automático.
+// jarvis.js — Jarvis conversacional do PrevControl (Escritório Cleiton)
+// Conduz a triagem em forma de conversa, seguindo o roteiro de perguntas de rules.js.
+// Ao final, gera um "ticket" (resumo) enviado à pessoa via link de WhatsApp.
+// Modelo: Claude Haiku (custo baixo). Apenas texto — sem geração de voz.
 
-const SYSTEM_PROMPT_BASE = `Você é o Jarvis, assistente virtual do Escritório Cleiton, especializado em orientação previdenciária e trabalhista no Brasil (INSS, aposentadoria, auxílio-doença, pensão por morte, BPC/LOAS, direitos trabalhistas).
+import { getBenefitConfig, runTriagem, CLASSIFICATION_LABELS } from "./rules.js";
 
-Regras:
-- Responda em português, de forma simples, direta e sem juridiquês, em no máximo 4 frases.
-- Você dá orientação geral, NUNCA um parecer jurídico definitivo sobre o caso da pessoa.
-- Sempre que fizer sentido, incentive a pessoa a fazer a triagem completa no formulário acima ou falar com o escritório pelo WhatsApp para uma análise real do caso dela.
-- Se a pergunta não tiver relação com previdência/trabalhista/INSS/BPC, redirecione educadamente para esses temas.
-- Nunca invente números de lei, prazos ou valores que você não tenha certeza — nesses casos, oriente a pessoa a confirmar no Meu INSS ou com o escritório.`;
+const SYSTEM_PROMPT = `Você é o Jarvis, assistente virtual de previdência social do Escritório Cleiton.
 
-// Limite simples de taxa por IP (em memória — reseta a cada novo deploy/cold start).
-// Para algo mais robusto entre deploys, dá pra trocar por Cloudflare KV depois.
+## SEU PAPEL
+Conduzir uma conversa acolhedora para ajudar a pessoa a descobrir se tem direito a algum benefício do INSS ou direito trabalhista. Você é uma conversa de verdade, gentil e simples — não um formulário.
+
+## COMO CONDUZIR
+1. Pergunte, de forma natural, qual é a dúvida ou situação da pessoa, para identificar o benefício (aposentadoria por idade, por tempo de contribuição, auxílio-doença, salário-maternidade, pensão por morte, BPC/LOAS, rescisão trabalhista, ou revisão de benefício).
+2. Depois de identificar o benefício, faça as perguntas necessárias UMA DE CADA VEZ. Espere a resposta antes de seguir para a próxima.
+3. Use linguagem simples, sem juridiquês. Explique siglas na primeira vez (ex: "BPC, que é um benefício para quem tem baixa renda").
+4. Se a pessoa mencionar que vai enviar foto de documento, avise que pode usar o botão de anexo na tela, e continue a conversa normalmente.
+
+## TOM DE VOZ
+- Acolhedor, paciente, nunca apressado ou seco.
+- Se a pessoa perguntar de novo algo já dito (mesmo com outras palavras), nunca dê a entender que ela "já deveria saber". Responda de forma breve e gentil, como se fosse natural perguntar de novo.
+- Frases curtas — no máximo 3-4 frases por resposta, a não ser que a pessoa peça mais detalhes.
+- Trate a pessoa com respeito e dignidade.
+
+## REGRAS IMPORTANTES
+- Nunca invente números de lei, prazos ou valores sem certeza — oriente a confirmar no Meu INSS ou com o escritório.
+- Você dá orientação geral, nunca um parecer jurídico definitivo.
+- Se a pergunta não tiver relação com previdência/trabalhista/INSS, redirecione educadamente ao tema.
+
+## FORMATO DE RESPOSTA (PARA O SISTEMA, invisível à pessoa)
+Quando identificar o benefício, inclua em linha separada:
+[BENEFICIO: chave_do_beneficio]
+Use exatamente uma destas chaves: aposentadoria_idade, aposentadoria_tempo, auxilio_doenca, salario_maternidade, pensao_morte, bpc_loas, trabalhista, revisao
+
+Quando estiver perguntando algo do roteiro estruturado, inclua:
+[PERGUNTANDO: id_da_pergunta]
+
+Quando a pessoa responder essa pergunta, inclua a resposta interpretada:
+[RESPOSTA: id_da_pergunta=valor]
+
+Continue a conversa normalmente ao redor dessas marcações.`;
+
 const rateLimitMap = new Map();
-const RATE_LIMIT = 5; // perguntas
-const RATE_WINDOW_MS = 60 * 1000; // por minuto
+const RATE_LIMIT = 15;
+const RATE_WINDOW_MS = 60 * 1000;
 
 function checkRateLimit(ip) {
   const now = Date.now();
@@ -40,123 +56,126 @@ function checkRateLimit(ip) {
   return true;
 }
 
-// Palavras-chave simples por categoria, pra decidir quais normas buscar no D1
-// com base na pergunta da pessoa. Dá pra refinar isso depois.
-const CATEGORY_KEYWORDS = {
-  'BPC/LOAS': ['bpc', 'loas', 'assistencial', 'deficiencia', 'deficiência'],
-  'Aposentadoria': ['aposentadoria', 'aposentar', 'tempo de contribuição', 'idade minima', 'idade mínima'],
-  'Auxílio-doença': ['auxilio-doenca', 'auxílio-doença', 'auxilio doenca', 'incapacidade', 'afastamento'],
-  'Pensão por morte': ['pensao por morte', 'pensão por morte', 'dependente', 'falecimento'],
-  'Trabalhista': ['clt', 'demissao', 'demissão', 'rescisao', 'rescisão', 'ferias', 'férias', 'fgts'],
-};
+function extrairMarcacoes(texto) {
+  const beneficioMatch = texto.match(/\[BENEFICIO:\s*(\w+)\]/);
+  const perguntandoMatch = texto.match(/\[PERGUNTANDO:\s*(\w+)\]/);
+  const respostaMatch = texto.match(/\[RESPOSTA:\s*(\w+)=([^\]]+)\]/);
 
-function detectCategories(question) {
-  const normalized = question.toLowerCase();
-  const found = Object.entries(CATEGORY_KEYWORDS)
-    .filter(([, keywords]) => keywords.some((kw) => normalized.includes(kw)))
-    .map(([categoria]) => categoria);
-  return found;
+  const textoLimpo = texto
+    .replace(/\[BENEFICIO:\s*\w+\]/g, "")
+    .replace(/\[PERGUNTANDO:\s*\w+\]/g, "")
+    .replace(/\[RESPOSTA:\s*\w+=[^\]]+\]/g, "")
+    .trim();
+
+  return {
+    textoLimpo,
+    beneficio: beneficioMatch ? beneficioMatch[1] : null,
+    perguntando: perguntandoMatch ? perguntandoMatch[1] : null,
+    resposta: respostaMatch ? { id: respostaMatch[1], valor: respostaMatch[2].trim() } : null
+  };
 }
 
-async function buscarNormas(db, question) {
-  if (!db) return [];
-  try {
-    const categorias = detectCategories(question);
-    let stmt;
-    if (categorias.length > 0) {
-      const placeholders = categorias.map(() => '?').join(',');
-      stmt = db
-        .prepare(`SELECT categoria, conteudo, fonte FROM normas WHERE categoria IN (${placeholders}) ORDER BY criado_em DESC LIMIT 8`)
-        .bind(...categorias);
-    } else {
-      // Sem categoria clara na pergunta: pega as normas mais recentes como contexto geral.
-      stmt = db.prepare('SELECT categoria, conteudo, fonte FROM normas ORDER BY criado_em DESC LIMIT 8');
-    }
-    const { results } = await stmt.all();
-    return results || [];
-  } catch (err) {
-    console.error('Erro ao buscar normas no D1:', err);
-    return [];
-  }
-}
-
-function montarSystemPrompt(normas) {
-  if (!normas || normas.length === 0) return SYSTEM_PROMPT_BASE;
-
-  const bloco = normas
-    .map((n) => `- [${n.categoria}] ${n.conteudo}${n.fonte ? ` (Fonte: ${n.fonte})` : ''}`)
-    .join('\n');
-
-  return `${SYSTEM_PROMPT_BASE}
-
-Use as normas abaixo, cadastradas pelo escritório, como base para fundamentar sua resposta sempre que forem relevantes para a pergunta. Não cite normas que não estejam nesta lista:
-${bloco}`;
-}
-
-export async function onRequestPost(context) {
-  const { request, env } = context;
-
-  try {
-    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-    if (!checkRateLimit(ip)) {
-      return jsonResponse({ error: 'Muitas perguntas em pouco tempo. Aguarde um minuto e tente de novo.' }, 429);
-    }
-
-    const body = await request.json().catch(() => null);
-    const question = body && typeof body.question === 'string' ? body.question.trim() : '';
-
-    if (!question) {
-      return jsonResponse({ error: 'Envie uma pergunta.' }, 400);
-    }
-    if (question.length > 500) {
-      return jsonResponse({ error: 'Pergunta muito longa. Tente resumir.' }, 400);
-    }
-
-    if (!env.ANTHROPIC_API_KEY) {
-      return jsonResponse({ error: 'Chat ainda não configurado no servidor.' }, 500);
-    }
-
-    const normas = await buscarNormas(env.DB, question);
-    const systemPrompt = montarSystemPrompt(normas);
-
-    const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
-        max_tokens: 300,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: question }],
-      }),
-    });
-
-    if (!apiRes.ok) {
-      const errText = await apiRes.text().catch(() => '');
-      console.error('Anthropic API error:', apiRes.status, errText);
-      return jsonResponse({ error: 'Não consegui responder agora. Tente novamente em instantes.' }, 502);
-    }
-
-    const data = await apiRes.json();
-    const answer = (data.content || [])
-      .filter((block) => block.type === 'text')
-      .map((block) => block.text)
-      .join('\n')
-      .trim();
-
-    return jsonResponse({ answer: answer || 'Não consegui gerar uma resposta agora. Tente reformular a pergunta.' });
-  } catch (err) {
-    console.error('jarvis.js error:', err);
-    return jsonResponse({ error: 'Erro interno. Tente novamente.' }, 500);
-  }
-}
-
-function jsonResponse(obj, status = 200) {
-  return new Response(JSON.stringify(obj), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
+async function chamarClaude(env, messages) {
+  const apiRes = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": env.ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: "claude-haiku-4-5",
+      max_tokens: 400,
+      system: [
+        { type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }
+      ],
+      messages
+    }),
   });
+
+  if (!apiRes.ok) {
+    const errText = await apiRes.text().catch(() => "");
+    console.error("Anthropic error:", apiRes.status, errText);
+    throw new Error("Falha ao consultar o Jarvis");
+  }
+
+  const data = await apiRes.json();
+  return (data.content || [])
+    .filter((block) => block.type === "text")
+    .map((block) => block.text)
+    .join("\n")
+    .trim();
+}
+
+export function checkJarvisRateLimit(ip) {
+  return checkRateLimit(ip);
+}
+
+export async function chatWithJarvis(env, messages, triagemState = {}) {
+  const respostaBruta = await chamarClaude(env, messages);
+  const { textoLimpo, beneficio, perguntando, resposta } = extrairMarcacoes(respostaBruta);
+
+  const novoEstado = { ...triagemState };
+
+  if (beneficio && !novoEstado.benefit_type) {
+    novoEstado.benefit_type = beneficio;
+    novoEstado.answers = {};
+  }
+  if (resposta && novoEstado.answers) {
+    novoEstado.answers[resposta.id] = resposta.valor;
+  }
+  if (perguntando) {
+    novoEstado.perguntaAtual = perguntando;
+  }
+
+  let resultadoTriagem = null;
+  if (novoEstado.benefit_type && novoEstado.answers) {
+    const config = getBenefitConfig(novoEstado.benefit_type);
+    if (config) {
+      const requiredQuestions = config.questions.filter((q) => q.required);
+      const todasRespondidas = requiredQuestions.every((q) => novoEstado.answers[q.id] !== undefined);
+      if (todasRespondidas) {
+        resultadoTriagem = runTriagem(novoEstado.benefit_type, novoEstado.answers);
+        novoEstado.resultado = resultadoTriagem;
+        novoEstado.finalizado = true;
+      }
+    }
+  }
+
+  return {
+    reply: textoLimpo,
+    state: novoEstado,
+    resultado: resultadoTriagem
+      ? {
+          classification: resultadoTriagem.class,
+          classification_label: CLASSIFICATION_LABELS[resultadoTriagem.class],
+          rationale: resultadoTriagem.rationale
+        }
+      : null
+  };
+}
+
+// Gera o ticket (resumo + compromisso) que a pessoa recebe ao final da conversa
+export function gerarTicket(nome, benefitLabel, resultado, temDocumentos) {
+  const linhas = [
+    `Olá ${nome}! Este é o resumo da sua conversa com o Jarvis:`,
+    ``,
+    `📋 Assunto: ${benefitLabel}`,
+    `✅ Resultado: ${resultado.classification_label}`,
+    `📝 ${resultado.rationale}`,
+  ];
+  if (temDocumentos) {
+    linhas.push(`📎 Documentos recebidos durante a conversa.`);
+  }
+  linhas.push(
+    ``,
+    `Este é um resultado inicial e automático — não substitui uma análise completa.`,
+    `O Escritório Cleiton vai revisar seu caso e entrar em contato.`
+  );
+  return linhas.join("\n");
+}
+
+export function gerarLinkWhatsApp(env, nome, benefitLabel, resultado, temDocumentos = false) {
+  const ticket = gerarTicket(nome, benefitLabel, resultado, temDocumentos);
+  return `https://wa.me/${env.WHATSAPP_NUMBER}?text=${encodeURIComponent(ticket)}`;
 }
