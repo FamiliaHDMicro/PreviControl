@@ -1,9 +1,10 @@
-// index.js — PrevControl Worker
-// Dois caminhos de entrada: formulário tradicional (/api/triagem) e Jarvis conversacional (/api/jarvis)
-// Ambos alimentam a mesma tabela `leads`, vista no painel admin (/api/admin/leads).
+// index.js — PrevControl Worker (Escritório Cleiton)
+// Caminhos: formulário tradicional (/api/triagem), Jarvis conversacional (/api/jarvis),
+// upload de documentos (/api/upload), painel admin (/api/admin/leads).
+// Telegram removido — tudo se resolve na própria landing page + WhatsApp.
 
 import { getAllBenefits, getBenefitConfig, runTriagem, CLASSIFICATION_LABELS } from "./rules.js";
-import { chatWithJarvis, gerarLinkWhatsApp } from "./jarvis.js";
+import { chatWithJarvis, gerarLinkWhatsApp, checkJarvisRateLimit } from "./jarvis.js";
 
 export default {
   async fetch(request, env, ctx) {
@@ -31,6 +32,11 @@ export default {
     // ---- Jarvis conversacional ----
     if (path === "/api/jarvis" && request.method === "POST") {
       return handleJarvis(request, env, corsHeaders);
+    }
+
+    // ---- Upload de documentos (direto na landing page) ----
+    if (path === "/api/upload" && request.method === "POST") {
+      return handleUpload(request, env, corsHeaders);
     }
 
     // ---- Painel admin (protegido por token) ----
@@ -113,6 +119,11 @@ async function handleTriagem(request, env, corsHeaders) {
 // ---- Handler: Jarvis conversacional ----
 async function handleJarvis(request, env, corsHeaders) {
   try {
+    const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+    if (!checkJarvisRateLimit(ip)) {
+      return json({ error: "Muitas mensagens em pouco tempo. Aguarde um minuto." }, corsHeaders, 429);
+    }
+
     const body = await request.json();
     const { messages, state, name, phone } = body;
 
@@ -128,9 +139,10 @@ async function handleJarvis(request, env, corsHeaders) {
     let waLink = null;
     let leadId = null;
 
-    // Se a triagem foi concluída nesta troca, salva o lead e gera o link de WhatsApp
     if (resultado && name && phone) {
       const config = getBenefitConfig(novoEstado.benefit_type);
+      const temDocumentos = Boolean(novoEstado.documentos && novoEstado.documentos.length > 0);
+
       leadId = await salvarLead(env, {
         name, phone, email: null,
         benefit_type: novoEstado.benefit_type,
@@ -138,7 +150,8 @@ async function handleJarvis(request, env, corsHeaders) {
         cep: null,
         result: { class: resultado.classification, rationale: resultado.rationale }
       });
-      waLink = gerarLinkWhatsApp(env, name, config ? config.label : novoEstado.benefit_type, resultado);
+
+      waLink = gerarLinkWhatsApp(env, name, config ? config.label : novoEstado.benefit_type, resultado, temDocumentos);
     }
 
     return json({
@@ -154,7 +167,44 @@ async function handleJarvis(request, env, corsHeaders) {
   }
 }
 
-// ---- Utilitário: salva lead no D1 (usado tanto pelo formulário quanto pelo Jarvis) ----
+// ---- Handler: upload de documento direto na landing page (via R2) ----
+async function handleUpload(request, env, corsHeaders) {
+  try {
+    if (!env.DOCS_BUCKET) {
+      return json({ error: "Upload de documentos ainda não configurado no servidor." }, corsHeaders, 500);
+    }
+
+    const formData = await request.formData();
+    const file = formData.get("file");
+    const leadId = formData.get("lead_id") || "sem_id";
+
+    if (!file || typeof file === "string") {
+      return json({ error: "Nenhum arquivo enviado." }, corsHeaders, 400);
+    }
+
+    const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      return json({ error: "Tipo de arquivo não permitido. Envie foto (JPG/PNG) ou PDF." }, corsHeaders, 400);
+    }
+
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+    if (file.size > MAX_SIZE) {
+      return json({ error: "Arquivo muito grande (máximo 10MB)." }, corsHeaders, 400);
+    }
+
+    const key = `leads/${leadId}/${Date.now()}-${file.name}`;
+    await env.DOCS_BUCKET.put(key, file.stream(), {
+      httpMetadata: { contentType: file.type }
+    });
+
+    return json({ ok: true, key }, corsHeaders);
+  } catch (e) {
+    console.error("upload handler error:", e);
+    return json({ error: "Erro ao enviar documento: " + e.message }, corsHeaders, 500);
+  }
+}
+
+// ---- Utilitário: salva lead no D1 (usado pelo formulário e pelo Jarvis) ----
 async function salvarLead(env, { name, phone, email, benefit_type, answers, cep, result }) {
   const stmt = env.DB.prepare(
     `INSERT INTO leads (name, phone, email, benefit_type, answers_json, classification, rationale, cep, status)
