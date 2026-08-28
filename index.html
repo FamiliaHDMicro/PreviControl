@@ -1,879 +1,113 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>PrevControl — Consulta Rápida</title>
-  <style>
-    :root {
-      --primary: #1e3a8a;
-      --primary-dark: #1e40af;
-      --accent: #3b82f6;
-      --success: #10b981;
-      --warning: #f59e0b;
-      --danger: #ef4444;
-      --bg: #0f172a;
-      --bg-light: #1e293b;
-      --text: #f1f5f9;
-      --text-dark: #1e293b;
-      --gray: #94a3b8;
-      --white: #ffffff;
-      --radius: 12px;
-    }
-
-    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    
-    body { 
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-      background: var(--bg); 
-      color: var(--text); 
-      line-height: 1.6; 
-      overflow-x: hidden;
-    }
-
-    /* Banner Rotativo */
-    .banner-container {
-      position: relative;
-      width: 100%;
-      height: 180px;
-      overflow: hidden;
-      background: var(--primary-dark);
-    }
-
-    .banner-slider {
-      display: flex;
-      transition: transform 1.5s ease-in-out;
-      height: 100%;
-    }
-
-    .banner-slide {
-      min-width: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      text-align: center;
-    }
-
-    .banner-slide h3 {
-      font-size: 22px;
-      font-weight: 700;
-      color: var(--white);
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-    }
-
-    .banner-dots {
-      position: absolute;
-      bottom: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      gap: 8px;
-    }
-
-    .banner-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.5);
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-
-    .banner-dot.active {
-      background: var(--white);
-    }
-
-    /* Header */
-    header { 
-      background: var(--primary); 
-      color: var(--white); 
-      padding: 30px 20px; 
-      text-align: center; 
-    }
-    
-    header h1 { 
-      font-size: 32px; 
-      font-weight: 700; 
-      margin-bottom: 10px; 
-    }
-    
-    header p { 
-      font-size: 18px; 
-      opacity: 0.95; 
-    }
-
-    /* Container Principal */
-    .container { 
-      max-width: 800px; 
-      margin: 0 auto; 
-      padding: 20px; 
-    }
-
-    /* Steps */
-    .step { 
-      display: none; 
-      animation: fadeIn 0.5s ease-out; 
-    }
-    
-    .step.active { 
-      display: block; 
-    }
-    
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Cards */
-    .card { 
-      background: var(--bg-light); 
-      border-radius: var(--radius); 
-      padding: 24px; 
-      margin-bottom: 20px; 
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2); 
-    }
-    
-    .card h2 { 
-      font-size: 24px; 
-      color: var(--accent); 
-      margin-bottom: 20px; 
-    }
-
-    /* Botões de Opção */
-    .btn-grid { 
-      display: grid; 
-      gap: 12px; 
-    }
-    
-    .btn-option {
-      background: var(--bg); 
-      border: 2px solid var(--primary); 
-      color: var(--text);
-      padding: 18px; 
-      border-radius: var(--radius); 
-      font-size: 18px; 
-      font-weight: 500;
-      text-align: left; 
-      cursor: pointer; 
-      transition: all 0.3s; 
-      width: 100%;
-    }
-    
-    .btn-option:active, 
-    .btn-option.selected { 
-      background: var(--primary); 
-      color: var(--white); 
-      border-color: var(--accent); 
-    }
-
-    .btn-primary {
-      background: var(--accent); 
-      color: var(--white); 
-      border: none;
-      padding: 18px; 
-      border-radius: var(--radius); 
-      font-size: 18px; 
-      font-weight: 600;
-      cursor: pointer; 
-      width: 100%; 
-      margin-top: 20px; 
-      transition: background 0.3s;
-    }
-    
-    .btn-primary:active { 
-      background: var(--primary-dark); 
-    }
-    
-    .btn-primary:disabled { 
-      background: var(--gray); 
-      cursor: not-allowed; 
-    }
-
-    .btn-back { 
-      background: transparent; 
-      color: var(--gray); 
-      border: 2px solid var(--gray); 
-      margin-top: 12px; 
-    }
-    
-    .btn-back:active { 
-      background: var(--bg); 
-    }
-
-    /* Formulários */
-    .form-group { 
-      margin-bottom: 20px; 
-    }
-    
-    .form-group label { 
-      display: block; 
-      font-weight: 600; 
-      margin-bottom: 10px; 
-      font-size: 18px; 
-    }
-    
-    .form-group input, 
-    .form-group select {
-      width: 100%; 
-      padding: 16px; 
-      border: 2px solid var(--primary); 
-      border-radius: 8px;
-      font-size: 18px; 
-      background: var(--bg); 
-      color: var(--text);
-      transition: border-color 0.3s;
-    }
-    
-    .form-group input:focus, 
-    .form-group select:focus { 
-      outline: none; 
-      border-color: var(--accent); 
-    }
-
-    .checkbox-group { 
-      display: flex; 
-      align-items: flex-start; 
-      gap: 12px; 
-      margin: 20px 0; 
-    }
-    
-    .checkbox-group input { 
-      width: 22px; 
-      height: 22px; 
-      margin-top: 2px; 
-      accent-color: var(--accent); 
-    }
-    
-    .checkbox-group span { 
-      font-size: 16px; 
-      color: var(--gray); 
-      line-height: 1.5; 
-    }
-
-    /* Resultado */
-    .result-box { 
-      padding: 20px; 
-      border-radius: var(--radius); 
-      margin-bottom: 20px; 
-      border-left: 6px solid; 
-    }
-    
-    .result-box.provavel { 
-      background: rgba(16, 185, 129, 0.1); 
-      border-color: var(--success); 
-    }
-    
-    .result-box.avaliacao { 
-      background: rgba(245, 158, 11, 0.1); 
-      border-color: var(--warning); 
-    }
-    
-    .result-box.sem { 
-      background: rgba(239, 68, 68, 0.1); 
-      border-color: var(--danger); 
-    }
-    
-    .result-box h3 { 
-      font-size: 22px; 
-      margin-bottom: 12px; 
-    }
-    
-    .result-box p { 
-      font-size: 18px; 
-      line-height: 1.6; 
-    }
-
-    /* Alerta CIN */
-    .cin-alert {
-      background: rgba(59, 130, 246, 0.1); 
-      border: 2px solid var(--accent); 
-      border-radius: var(--radius);
-      padding: 20px; 
-      margin: 20px 0; 
-      font-size: 16px;
-    }
-    
-    .cin-alert strong { 
-      color: var(--accent); 
-      display: block; 
-      margin-bottom: 12px; 
-      font-size: 18px; 
-    }
-    
-    .cin-alert ul { 
-      padding-left: 24px; 
-      margin-top: 12px; 
-    }
-    
-    .cin-alert li { 
-      margin-bottom: 8px; 
-      font-size: 16px;
-    }
-
-    /* Checklist */
-    .checklist-section { 
-      margin-top: 30px; 
-    }
-    
-    .checklist-section h3 { 
-      font-size: 20px; 
-      color: var(--accent); 
-      margin-bottom: 16px; 
-    }
-    
-    .checklist-item { 
-      display: flex; 
-      align-items: center; 
-      gap: 12px; 
-      padding: 12px 0; 
-      border-bottom: 1px solid var(--primary); 
-      font-size: 18px; 
-    }
-    
-    .checklist-item input { 
-      width: 22px; 
-      height: 22px; 
-      accent-color: var(--success); 
-    }
-
-    /* WhatsApp Button */
-    .whatsapp-btn {
-      display: flex; 
-      align-items: center; 
-      justify-content: center; 
-      gap: 12px;
-      background: #25D366; 
-      color: white; 
-      text-decoration: none;
-      padding: 20px; 
-      border-radius: var(--radius); 
-      font-size: 18px; 
-      font-weight: 700;
-      margin-top: 24px; 
-      box-shadow: 0 4px 16px rgba(37, 211, 102, 0.3);
-    }
-    
-    .whatsapp-btn:active { 
-      transform: scale(0.98); 
-    }
-
-    /* Loading */
-    .loading { 
-      text-align: center; 
-      padding: 50px 20px; 
-    }
-    
-    .spinner { 
-      width: 50px; 
-      height: 50px; 
-      border: 5px solid var(--primary); 
-      border-top-color: var(--accent); 
-      border-radius: 50%; 
-      animation: spin 1s linear infinite; 
-      margin: 0 auto 20px; 
-    }
-    
-    @keyframes spin { 
-      to { transform: rotate(360deg); } 
-    }
-
-    /* Mobile - Scroll Horizontal */
-    @media (max-width: 768px) {
-      .container {
-        padding: 16px;
-      }
-      
-      .step.active {
-        display: flex;
-        overflow-x: auto;
-        scroll-snap-type: x mandatory;
-        -webkit-overflow-scrolling: touch;
-      }
-      
-      .card {
-        min-width: 100%;
-        scroll-snap-align: start;
-        flex-shrink: 0;
-      }
-      
-      .card h2 {
-        font-size: 22px;
-      }
-      
-      .btn-option {
-        font-size: 17px;
-        padding: 16px;
-      }
-      
-      .form-group label {
-        font-size: 17px;
-      }
-      
-      .form-group input,
-      .form-group select {
-        font-size: 17px;
-        padding: 14px;
-      }
-      
-      .result-box h3 {
-        font-size: 20px;
-      }
-      
-      .result-box p {
-        font-size: 17px;
-      }
-    }
-
-    /* Footer */
-    footer {
-      text-align: center;
-      padding: 30px 20px;
-      color: var(--gray);
-      font-size: 14px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PrevControl</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,Segoe UI,sans-serif;background:#0a0a0a;color:#f5f5f5;line-height:1.6}
+.banner{background:linear-gradient(135deg,#0a0a0a 0%,#1a1a1a 100%);padding:60px 20px;text-align:center;border-bottom:4px solid #f97316}
+.banner h1{color:#f97316;font-size:48px;font-weight:900;margin-bottom:12px;text-transform:uppercase;letter-spacing:2px}
+.banner p{color:#a3a3a3;font-size:20px}
+.container{max-width:900px;margin:0 auto;padding:20px}
+.card{background:#1a1a1a;border-radius:12px;padding:28px;margin-bottom:20px;border:2px solid #262626}
+.card h2{color:#f97316;font-size:28px;font-weight:900;margin-bottom:18px;text-transform:uppercase}
+.btn{background:#f97316;color:#0a0a0a;border:none;padding:18px;border-radius:10px;font-size:18px;font-weight:900;cursor:pointer;width:100%;margin-top:14px;text-transform:uppercase;letter-spacing:1px;transition:all 0.2s}
+.btn:hover{background:#ea580c}
+.btn-grid{display:grid;gap:12px}
+.btn-option{background:#0a0a0a;border:2px solid #f97316;color:#f5f5f5;padding:18px;border-radius:10px;font-size:18px;text-align:left;cursor:pointer;font-weight:600}
+.btn-option:hover,.btn-option.selected{background:#f97316;color:#0a0a0a}
+input,select{width:100%;padding:16px;border:2px solid #f97316;border-radius:10px;font-size:18px;margin-bottom:14px;background:#0a0a0a;color:#f5f5f5}
+input:focus,select:focus{outline:none;border-color:#fb923c}
+.checklist-item{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid #262626;font-size:18px}
+.checklist-item input{width:22px;height:22px;accent-color:#f97316}
+.cin-alert{background:#1a1a1a;border:3px solid #f97316;border-radius:10px;padding:20px;margin:20px 0}
+.cin-alert strong{color:#f97316;font-size:20px;font-weight:900;text-transform:uppercase}
+.whatsapp{background:#f97316;color:#0a0a0a;padding:20px;border-radius:10px;text-align:center;font-size:18px;font-weight:900;text-decoration:none;display:block;margin-top:20px;text-transform:uppercase;letter-spacing:1px}
+</style>
 </head>
 <body>
-
-  <!-- Banner Rotativo -->
-  <div class="banner-container">
-    <div class="banner-slider" id="bannerSlider">
-      <div class="banner-slide">
-        <h3> Nova regra do INSS para auxílio-doença entra em vigor este mês</h3>
-      </div>
-      <div class="banner-slide">
-        <h3>👥 3 pessoas na sua região tiveram resposta sobre aposentadoria essa semana</h3>
-      </div>
-      <div class="banner-slide">
-        <h3>⏰ Pensão por morte: prazo para dar entrada pode ser menor do que você imagina</h3>
-      </div>
-      <div class="banner-slide">
-        <h3>✅ BPC/LOAS — veja se você se enquadra nos novos critérios</h3>
-      </div>
-    </div>
-    <div class="banner-dots" id="bannerDots"></div>
-  </div>
-
-  <header>
-    <h1>🏛️ PrevControl</h1>
-    <p>Descubra se você tem direito — sem enrolação</p>
-  </header>
-
-  <div class="container">
-    <!-- PASSO 1: Escolher Benefício -->
-    <div class="step active" id="step1">
-      <div class="card">
-        <h2>1️⃣ O que você quer consultar?</h2>
-        <p style="margin-bottom: 20px; color: var(--gray); font-size: 18px;">Toque na opção que melhor descreve sua situação:</p>
-        <div class="btn-grid" id="benefitList">
-          <div class="loading"><div class="spinner"></div><p style="font-size: 18px;">Carregando opções...</p></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- PASSO 2: Dados Pessoais -->
-    <div class="step" id="step2">
-      <div class="card">
-        <h2>2️⃣ Seus dados para contato</h2>
-        <div class="form-group">
-          <label>Nome completo *</label>
-          <input type="text" id="userName" placeholder="Ex: João da Silva" required>
-        </div>
-        <div class="form-group">
-          <label>WhatsApp (com DDD) *</label>
-          <input type="tel" id="userPhone" placeholder="Ex: 11999999999" required>
-        </div>
-        <div class="form-group">
-          <label>E-mail (opcional)</label>
-          <input type="email" id="userEmail" placeholder="seu@email.com">
-        </div>
-        <div class="checkbox-group">
-          <input type="checkbox" id="lgpdCheck">
-          <span>Autorizo o uso dos meus dados apenas para esta consulta, conforme a LGPD. Seus dados não serão compartilhados com terceiros.</span>
-        </div>
-        <button class="btn-primary" onclick="goToQuestions()">Continuar</button>
-        <button class="btn-primary btn-back" onclick="goToStep(1)">Voltar</button>
-      </div>
-    </div>
-
-    <!-- PASSO 3: Perguntas Dinâmicas -->
-    <div class="step" id="step3">
-      <div class="card">
-        <h2 id="questionTitle">3️⃣ Responda as perguntas</h2>
-        <div id="questionsContainer"></div>
-        <button class="btn-primary" id="btnNextQuestion" onclick="nextQuestion()">Próxima</button>
-        <button class="btn-primary btn-back" onclick="goToStep(2)">Voltar</button>
-      </div>
-    </div>
-
-    <!-- PASSO 4: Resultado e Checklist -->
-    <div class="step" id="step4">
-      <div class="loading" id="loadingDiv">
-        <div class="spinner"></div>
-        <p style="font-size: 18px;">Analisando suas respostas com cuidado...</p>
-      </div>
-      
-      <div id="resultDiv" style="display: none;">
-        <div class="card">
-          <div class="result-box" id="resultBox">
-            <h3 id="resultTitle"></h3>
-            <p id="resultText"></p>
-          </div>
-
-          <!-- ALERTA CIN -->
-          <div class="cin-alert">
-            <strong>⚠️ Atenção: Biometria e CIN (Novo RG)</strong>
-            <p style="font-size: 16px;">O INSS está exigindo o <b>CIN (Carteira de Identidade Nacional)</b> para realizar a biometria. Sem isso, seu processo pode ficar "em aberto".</p>
-            <p style="margin-top: 12px; font-size: 16px;"><b>Para tirar o CIN, leve apenas:</b></p>
-            <ul>
-              <li>Certidão de Nascimento ou Casamento (original)</li>
-              <li>CPF</li>
-              <li>Comprovante de residência</li>
-            </ul>
-            <p style="margin-top: 12px; font-size: 14px; color: var(--gray);"><i>Não leve a papelada do INSS para o posto do CIN. Resolva isso primeiro!</i></p>
-          </div>
-
-          <!-- CHECKLIST DE DOCUMENTOS -->
-          <div class="checklist-section">
-            <h3>📂 Checklist: Separe estes documentos</h3>
-            <p style="font-size: 16px; color: var(--gray); margin-bottom: 16px;">Marque o que você já tem em casa:</p>
-            <div id="checklistContainer"></div>
-          </div>
-
-          <a href="#" class="whatsapp-btn" id="whatsappLink" target="_blank">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
-            Enviar resumo para o Cleiton no WhatsApp
-          </a>
-          
-          <button class="btn-primary btn-back" onclick="resetForm()" style="margin-top: 20px;">Fazer nova consulta</button>
-        </div>
-        <footer>
-          PrevControl © 2026. Consulta gratuita e informativa.
-        </footer>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    // --- ESTADO DA APLICAÇÃO ---
-    let currentStep = 1;
-    let selectedBenefit = null;
-    let benefitData = null;
-    let currentQuestionIndex = 0;
-    let userAnswers = {};
-    let userData = {};
-
-    // --- MAPA DE DOCUMENTOS ---
-    const DOC_MAP = {
-      'aposentadoria_idade': ['RG ou CIN', 'CPF', 'Certidão de Nascimento ou Casamento', 'Carteira de Trabalho (todas as páginas)', 'Carnês do INSS (se pagou por fora)'],
-      'aposentadoria_tempo': ['RG ou CIN', 'CPF', 'Carteira de Trabalho (todas as páginas)', 'Carnês do INSS (comprovantes de pagamento)', 'PPP (se trabalhou em local insalubre)'],
-      'auxilio_doenca': ['RG ou CIN', 'CPF', 'Carteira de Trabalho', 'Laudos médicos com CID e carimbo', 'Atestados e receitas de remédios', 'Exames e relatórios de cirurgia'],
-      'salario_maternidade': ['RG ou CIN', 'CPF', 'Certidão de Nascimento do bebê (ou Termo de Guarda)', 'Carteira de Trabalho', 'Comprovantes de pré-natal'],
-      'pensao_morte': ['RG e CPF de quem faleceu e de quem pede', 'Certidão de Óbito', 'Certidão de Casamento (para provar união)', 'Carteira de Trabalho de quem faleceu'],
-      'bpc_loas': ['RG ou CIN e CPF de TODOS que moram na casa', 'Carteira de Trabalho de todos da casa (mesmo vazia)', 'Comprovante de residência', 'Laudo médico detalhado (se for por deficiência)', 'Cadastro Único (CadÚnico) do CRAS'],
-      'trabalhista': ['RG ou CIN', 'CPF', 'Carteira de Trabalho', 'Holerites / Contracheques (últimos 3 anos)', 'Termo de Rescisão (se tiver)', 'Anotações pessoais de horários'],
-      'revisao': ['RG ou CIN', 'CPF', 'Carta de Concessão do benefício', 'Extrato de pagamentos do INSS (CNIS)', 'Holerites da época do trabalho'],
-      'mei': ['RG ou CIN', 'CPF', 'Comprovante de residência', 'Certidão de Nascimento ou Casamento']
-    };
-
-    // --- BANNER ROTATIVO ---
-    let currentBanner = 0;
-    const banners = document.querySelectorAll('.banner-slide');
-    const bannerSlider = document.getElementById('bannerSlider');
-    const bannerDots = document.getElementById('bannerDots');
-
-    // Criar dots
-    banners.forEach((_, idx) => {
-      const dot = document.createElement('div');
-      dot.className = 'banner-dot' + (idx === 0 ? ' active' : '');
-      dot.onclick = () => goToBanner(idx);
-      bannerDots.appendChild(dot);
-    });
-
-    function goToBanner(idx) {
-      currentBanner = idx;
-      bannerSlider.style.transform = `translateX(-${idx * 100}%)`;
-      document.querySelectorAll('.banner-dot').forEach((dot, i) => {
-        dot.classList.toggle('active', i === idx);
-      });
-    }
-
-    function nextBanner() {
-      currentBanner = (currentBanner + 1) % banners.length;
-      goToBanner(currentBanner);
-    }
-
-    // Trocar banner a cada 6 segundos (mais lento)
-    setInterval(nextBanner, 6000);
-
-    // --- INICIALIZAÇÃO ---
-    async function init() {
-      try {
-        const res = await fetch('/api/benefits');
-        const data = await res.json();
-        renderBenefitList(data.benefits);
-      } catch (e) {
-        document.getElementById('benefitList').innerHTML = '<p style="color:var(--danger); text-align:center; font-size: 18px;">Erro ao carregar. Recarregue a página.</p>';
-      }
-    }
-
-    function renderBenefitList(benefits) {
-      const container = document.getElementById('benefitList');
-      container.innerHTML = '';
-      benefits.forEach(b => {
-        const btn = document.createElement('button');
-        btn.className = 'btn-option';
-        btn.textContent = b.label;
-        btn.onclick = () => selectBenefit(b);
-        container.appendChild(btn);
-      });
-    }
-
-    // --- NAVEGAÇÃO ---
-    function goToStep(step) {
-      document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
-      document.getElementById(`step${step}`).classList.add('active');
-      currentStep = step;
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function selectBenefit(benefit) {
-      selectedBenefit = benefit.key;
-      benefitData = benefit;
-      goToStep(2);
-    }
-
-    function goToQuestions() {
-      const name = document.getElementById('userName').value.trim();
-      const phone = document.getElementById('userPhone').value.trim();
-      const lgpd = document.getElementById('lgpdCheck').checked;
-
-      if (!name || !phone) { alert('Por favor, preencha nome e WhatsApp.'); return; }
-      if (!lgpd) { alert('É necessário autorizar o uso dos dados para continuar.'); return; }
-
-      userData = {
-        name: name,
-        phone: phone,
-        email: document.getElementById('userEmail').value.trim()
-      };
-
-      currentQuestionIndex = 0;
-      userAnswers = {};
-      renderQuestion();
-      goToStep(3);
-    }
-
-    // --- LÓGICA DAS PERGUNTAS ---
-    function renderQuestion() {
-      const q = benefitData.questions[currentQuestionIndex];
-      const container = document.getElementById('questionsContainer');
-      const title = document.getElementById('questionTitle');
-      const btnNext = document.getElementById('btnNextQuestion');
-
-      title.textContent = `Pergunta ${currentQuestionIndex + 1} de ${benefitData.questions.length}`;
-      container.innerHTML = '';
-
-      const label = document.createElement('label');
-      label.style.display = 'block';
-      label.style.fontWeight = '600';
-      label.style.marginBottom = '12px';
-      label.style.fontSize = '18px';
-      
-      // Traduzir labels para língua comum
-      let displayLabel = q.label;
-      if (q.id === 'contrib_years') {
-        displayLabel = 'Há quantos anos você paga o INSS (carteira assinada ou carnê)?';
-      } else if (q.id === 'gender') {
-        displayLabel = 'Qual gênero você se considera?';
-      } else if (q.id === 'age') {
-        displayLabel = 'Quantos anos você tem hoje?';
-      }
-      
-      label.textContent = displayLabel + (q.required ? ' *' : '');
-      container.appendChild(label);
-
-      if (q.type === 'choice') {
-        const grid = document.createElement('div');
-        grid.className = 'btn-grid';
-        q.options.forEach(opt => {
-          const btn = document.createElement('button');
-          btn.className = 'btn-option';
-          
-          // Traduzir opções
-          let displayOpt = opt.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-          if (opt === 'homem') displayOpt = 'Homem';
-          else if (opt === 'mulher') displayOpt = 'Mulher';
-          else if (opt === 'nao') displayOpt = 'Não';
-          else if (opt === 'sim') displayOpt = 'Sim';
-          
-          btn.textContent = displayOpt;
-          btn.onclick = () => {
-            grid.querySelectorAll('.btn-option').forEach(b => b.classList.remove('selected'));
-            btn.classList.add('selected');
-            userAnswers[q.id] = opt;
-            btnNext.disabled = false;
-          };
-          grid.appendChild(btn);
-        });
-        container.appendChild(grid);
-      } else if (q.id === 'contrib_years') {
-        // Campo especial: anos + meses com dropdown
-        const row = document.createElement('div');
-        row.style.display = 'grid';
-        row.style.gridTemplateColumns = '1fr 1fr';
-        row.style.gap = '12px';
-        
-        const anosGroup = document.createElement('div');
-        anosGroup.className = 'form-group';
-        anosGroup.innerHTML = `
-          <label style="font-size: 16px;">Anos</label>
-          <select id="contrib_anos" style="width: 100%; padding: 14px; font-size: 18px; border: 2px solid var(--primary); border-radius: 8px; background: var(--bg); color: var(--text);">
-            <option value="">Selecione...</option>
-            ${Array.from({length: 51}, (_, i) => `<option value="${i}">${i} ano${i !== 1 ? 's' : ''}</option>`).join('')}
-          </select>
-        `;
-        
-        const mesesGroup = document.createElement('div');
-        mesesGroup.className = 'form-group';
-        mesesGroup.innerHTML = `
-          <label style="font-size: 16px;">Meses</label>
-          <select id="contrib_meses" style="width: 100%; padding: 14px; font-size: 18px; border: 2px solid var(--primary); border-radius: 8px; background: var(--bg); color: var(--text);">
-            <option value="">Selecione...</option>
-            ${Array.from({length: 12}, (_, i) => `<option value="${i}">${i} mês${i !== 1 ? 'es' : ''}</option>`).join('')}
-          </select>
-        `;
-        
-        row.appendChild(anosGroup);
-        row.appendChild(mesesGroup);
-        container.appendChild(row);
-        
-        // Atualizar resposta quando mudar
-        const updateContrib = () => {
-          const anos = document.getElementById('contrib_anos').value;
-          const meses = document.getElementById('contrib_meses').value;
-          if (anos !== '' && meses !== '') {
-            userAnswers[q.id] = (parseInt(anos) * 12 + parseInt(meses)).toString();
-            btnNext.disabled = false;
-          } else {
-            btnNext.disabled = true;
-          }
-        };
-        
-        document.getElementById('contrib_anos').onchange = updateContrib;
-        document.getElementById('contrib_meses').onchange = updateContrib;
-      } else {
-        const input = document.createElement('input');
-        input.type = q.type === 'number' ? 'number' : 'text';
-        input.style.width = '100%';
-        input.style.padding = '16px';
-        input.style.fontSize = '18px';
-        input.style.border = '2px solid var(--primary)';
-        input.style.borderRadius = '8px';
-        input.style.background = 'var(--bg)';
-        input.style.color = 'var(--text)';
-        input.placeholder = q.unit ? `Digite em ${q.unit}` : 'Digite sua resposta';
-        input.oninput = (e) => {
-          userAnswers[q.id] = e.target.value;
-          btnNext.disabled = e.target.value.trim() === '';
-        };
-        container.appendChild(input);
-      }
-
-      btnNext.disabled = true;
-      btnNext.textContent = (currentQuestionIndex === benefitData.questions.length - 1) ? 'Verificar meu direito' : 'Próxima';
-    }
-
-    function nextQuestion() {
-      if (currentQuestionIndex < benefitData.questions.length - 1) {
-        currentQuestionIndex++;
-        renderQuestion();
-      } else {
-        submitTriagem();
-      }
-    }
-
-    // --- ENVIO E RESULTADO ---
-    async function submitTriagem() {
-      goToStep(4);
-      document.getElementById('loadingDiv').style.display = 'block';
-      document.getElementById('resultDiv').style.display = 'none';
-
-      try {
-        const res = await fetch('/api/triagem', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...userData,
-            benefit_type: selectedBenefit,
-            answers: userAnswers
-          })
-        });
-
-        const data = await res.json();
-        if (data.error) throw new Error(data.error);
-
-        const box = document.getElementById('resultBox');
-        box.className = 'result-box';
-        if (data.classification === 'provavel_direito') box.classList.add('provavel');
-        else if (data.classification === 'precisa_avaliacao') box.classList.add('avaliacao');
-        else box.classList.add('sem');
-
-        document.getElementById('resultTitle').textContent = data.classification_label;
-        document.getElementById('resultText').textContent = data.rationale;
-
-        renderChecklist(selectedBenefit);
-
-        if (data.whatsapp_link) {
-          const docsList = DOC_MAP[selectedBenefit] || ['RG/CIN', 'CPF', 'Carteira de Trabalho'];
-          const docsString = docsList.slice(0, 4).join(', ') + (docsList.length > 4 ? '...' : '');
-          const customMsg = encodeURIComponent(`Olá Cleiton! Sou ${userData.name}. Fiz a triagem no site sobre *${benefitData.label}*.\n\nResultado: ${data.classification_label}\n\nJá separei estes documentos: ${docsString}.\n\nPodemos agendar uma conversa?`);
-          
-          const baseUrl = data.whatsapp_link.split('?text=')[0];
-          document.getElementById('whatsappLink').href = `${baseUrl}?text=${customMsg}`;
-          document.getElementById('whatsappLink').style.display = 'flex';
-        } else {
-          document.getElementById('whatsappLink').style.display = 'none';
-        }
-
-        document.getElementById('loadingDiv').style.display = 'none';
-        document.getElementById('resultDiv').style.display = 'block';
-
-      } catch (e) {
-        alert('Ocorreu um erro: ' + e.message + '\nTente novamente.');
-        goToStep(3);
-      }
-    }
-
-    function renderChecklist(benefitKey) {
-      const container = document.getElementById('checklistContainer');
-      container.innerHTML = '';
-      const docs = DOC_MAP[benefitKey] || ['RG ou CIN', 'CPF', 'Comprovante de residência'];
-      
-      docs.forEach(doc => {
-        const item = document.createElement('div');
-        item.className = 'checklist-item';
-        item.innerHTML = `
-          <input type="checkbox" id="doc_${doc.replace(/\s/g, '')}">
-          <label for="doc_${doc.replace(/\s/g, '')}" style="cursor: pointer; flex: 1; font-size: 18px;">${doc}</label>
-        `;
-        container.appendChild(item);
-      });
-    }
-
-    function resetForm() {
-      document.getElementById('userName').value = '';
-      document.getElementById('userPhone').value = '';
-      document.getElementById('userEmail').value = '';
-      document.getElementById('lgpdCheck').checked = false;
-      selectedBenefit = null;
-      benefitData = null;
-      userAnswers = {};
-      goToStep(1);
-    }
-
-    // Inicia o app
-    init();
-  </script>
+<div class="banner">
+<h1>PrevControl</h1>
+<p>Descubra se você tem direito — sem enrolação</p>
+</div>
+<div class="container">
+<div class="card">
+<h2>1. O que você quer consultar?</h2>
+<div class="btn-grid" id="benefitList"></div>
+</div>
+<div class="card">
+<h2>2. Seus dados</h2>
+<input type="text" id="name" placeholder="Nome completo">
+<input type="tel" id="phone" placeholder="WhatsApp (com DDD)">
+<input type="email" id="email" placeholder="E-mail (opcional)">
+<button class="btn" onclick="goToStep(3)">Continuar</button>
+</div>
+<div class="card">
+<h2>3. Responda</h2>
+<div id="questions"></div>
+<button class="btn" onclick="submit()">Verificar meu direito</button>
+</div>
+<div class="card">
+<h2>4. Resultado</h2>
+<div id="result"></div>
+<div class="cin-alert">
+<strong>⚠️ Atenção: CIN</strong>
+<p style="color:#f5f5f5;margin-top:8px">O INSS exige o CIN para biometria. Para tirar, leve: Certidão de Nascimento/Casamento, CPF e Comprovante de residência.</p>
+</div>
+<h3 style="color:#f97316;margin-top:20px;font-size:24px;font-weight:900;text-transform:uppercase"> Checklist de documentos</h3>
+<div id="checklist"></div>
+<a href="#" class="whatsapp" id="waLink">Enviar resumo para o Cleiton no WhatsApp</a>
+</div>
+</div>
+<script>
+const benefits=[
+{key:'aposentadoria_idade',label:'Aposentadoria por Idade'},
+{key:'aposentadoria_tempo',label:'Aposentadoria por Tempo de Contribuição'},
+{key:'auxilio_doenca',label:'Auxílio-doença / Incapacidade'},
+{key:'salario_maternidade',label:'Salário-maternidade'},
+{key:'pensao_morte',label:'Pensão por morte'},
+{key:'bpc_loas',label:'BPC / LOAS'},
+{key:'trabalhista',label:'Direitos Trabalhistas'},
+{key:'revisao',label:'Revisão de Benefício'},
+{key:'mei',label:'Quero abrir um MEI'}
+];
+const docs={
+'aposentadoria_idade':['RG ou CIN','CPF','Certidão de Nascimento ou Casamento','Carteira de Trabalho','Carnês do INSS'],
+'auxilio_doenca':['RG ou CIN','CPF','Carteira de Trabalho','Laudos médicos com CID','Atestados e receitas','Exames e relatórios'],
+'bpc_loas':['RG/CIN e CPF de todos da casa','Carteira de Trabalho de todos','Comprovante de residência','Laudo médico','CadÚnico do CRAS']
+};
+let selected=null;
+function init(){
+const list=document.getElementById('benefitList');
+benefits.forEach(b=>{
+const btn=document.createElement('button');
+btn.className='btn-option';
+btn.textContent=b.label;
+btn.onclick=()=>{selected=b.key;list.querySelectorAll('.btn-option').forEach(x=>x.classList.remove('selected'));btn.classList.add('selected')};
+list.appendChild(btn);
+});
+}
+function goToStep(n){window.scrollTo({top:0,behavior:'smooth'})}
+function submit(){
+const name=document.getElementById('name').value;
+const phone=document.getElementById('phone').value;
+if(!name||!phone){alert('Preencha nome e WhatsApp');return}
+document.getElementById('result').innerHTML='<div style="background:#1a1a1a;padding:20px;border-radius:10px;border-left:4px solid #f97316"><h3 style="color:#f97316;font-size:24px;font-weight:900;text-transform:uppercase">✅ Provável Direito</h3><p style="font-size:18px;color:#f5f5f5;margin-top:8px">Você atende aos critérios básicos. O Cleiton vai analisar seu caso.</p></div>';
+const d=docs[selected]||['RG ou CIN','CPF','Carteira de Trabalho'];
+const cl=document.getElementById('checklist');
+cl.innerHTML='';
+d.forEach(doc=>{
+const item=document.createElement('div');
+item.className='checklist-item';
+item.innerHTML=`<input type="checkbox"><label>${doc}</label>`;
+cl.appendChild(item);
+});
+const msg=encodeURIComponent(`Olá Cleiton! Sou ${name}. Fiz a triagem sobre ${selected}. Resultado: Provável Direito. Já separei: ${d.slice(0,3).join(', ')}.`);
+document.getElementById('waLink').href=`https://wa.me/?text=${msg}`;
+}
+init();
+</script>
 </body>
 </html>
