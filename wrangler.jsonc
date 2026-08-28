@@ -6,16 +6,8 @@
     "directory": ".",
     "binding": "ASSETS"
   },
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "prevcontrol-db",
-      "database_id": ""
-    }
-  ],
   "vars": {
-    "ADMIN_TOKEN": "troque_para_um_token_seguro_aqui",
-    "WHATSAPP_NUMBER": "5511999999999",
-    "TELEGRAM_BOT_URL": ""
+    "ADMIN_TOKEN": "senha123",
+    "WHATSAPP_NUMBER": "5511999999999"
   }
 }
