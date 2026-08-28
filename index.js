@@ -61,7 +61,7 @@ export default {
       return env.ASSETS.fetch(request);
     }
 
-    return new Response("Not found", { status: 404 });
+    return new Response("Página não encontrada", { status: 404 });
   },
 };
 
@@ -69,26 +69,37 @@ async function handleTriagem(request, env, corsHeaders) {
   try {
     const body = await request.json();
     const { name, phone, email, benefit_type, answers } = body;
+
     if (!name || !phone || !benefit_type || !answers) {
       return json({ error: "Dados incompletos" }, corsHeaders, 400);
     }
+
     const config = getBenefitConfig(benefit_type);
     if (!config) return json({ error: "Benefício inválido" }, corsHeaders, 400);
+
     const result = runTriagem(benefit_type, answers);
+
     const stmt = env.DB.prepare(
-      `INSERT INTO leads (name, phone, email, benefit_type, answers_json, classification, rationale, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'novo')`
+      `INSERT INTO leads (name, phone, email, benefit_type, answers_json, classification, rationale, status) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'novo')`
     ).bind(name, phone, email || null, benefit_type, JSON.stringify(answers), result.class, result.rationale);
+    
     await stmt.run();
-    const waMsg = encodeURIComponent(`Olá Cleiton! Sou *${name}*. Triagem: *${config.label}*. Resultado: ${CLASSIFICATION_LABELS[result.class]}. ${result.rationale}`);
+
+    const waMsg = encodeURIComponent(
+      `Olá Cleiton! Sou *${name}*.\nTriagem: *${config.label}*.\nResultado: ${CLASSIFICATION_LABELS[result.class]}.\nResumo: ${result.rationale}`
+    );
     const waLink = `https://wa.me/${env.WHATSAPP_NUMBER}?text=${waMsg}`;
+
     return json({
       classification: result.class,
       classification_label: CLASSIFICATION_LABELS[result.class],
       rationale: result.rationale,
       whatsapp_link: waLink,
     }, corsHeaders);
+
   } catch (e) {
-    return json({ error: e.message }, corsHeaders, 500);
+    return json({ error: "Erro interno: " + e.message }, corsHeaders, 500);
   }
 }
 
@@ -102,5 +113,8 @@ async function handleAdminAuth(request, env, handler, corsHeaders) {
 }
 
 function json(data, corsHeaders, status = 200) {
-  return new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json", ...corsHeaders } });
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { "Content-Type": "application/json", ...corsHeaders },
+  });
 }
