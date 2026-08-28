@@ -1,6 +1,5 @@
-// PrevControl — Worker backend (Tudo em um arquivo só)
+// PrevControl — Worker backend (Versão Única, sem imports externos)
 
-// === REGRAS EMBUTIDAS (antes era rules.js) ===
 const BENEFITS = {
   aposentadoria_idade: {
     label: "Aposentadoria por idade",
@@ -52,7 +51,7 @@ const BENEFITS = {
       if (!incapacitated) return { class: "sem_direito", rationale: "Auxílio-doença é exclusivo para quem está temporariamente impossibilitado de trabalhar." };
       if (contribMonths >= 12 && hasReport) return { class: "provavel_direito", rationale: "Carência de 12 meses atingida e laudo médico apresentado." };
       if (contribMonths >= 12 && !hasReport) return { class: "precisa_avaliacao", rationale: "Você tem a carência, mas precisa do laudo médico para a perícia." };
-      return { class: "precisa_avaliacao", rationale: `Faltam ${12 - contribMonths} meses de carência (ou pode ser dispensada em casos de acidente/doença grave).` };
+      return { class: "precisa_avaliacao", rationale: `Faltam ${12 - contribMonths} meses de carência.` };
     }
   },
   salario_maternidade: {
@@ -118,7 +117,6 @@ function runTriagem(benefitType, answers) {
   return config.evaluate(answers);
 }
 
-// === WORKER PRINCIPAL ===
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -134,24 +132,18 @@ export default {
       return new Response(null, { headers: corsHeaders });
     }
 
-    // Servir arquivos estáticos
     if (path === "/" || !path.startsWith("/api/")) {
-      if (env.ASSETS) {
-        return env.ASSETS.fetch(request);
-      }
+      if (env.ASSETS) return env.ASSETS.fetch(request);
     }
 
-    // API: Lista de benefícios
     if (path === "/api/benefits" && request.method === "GET") {
       return json({ benefits: getAllBenefits() }, corsHeaders);
     }
 
-    // API: Triagem
     if (path === "/api/triagem" && request.method === "POST") {
       return handleTriagem(request, env, corsHeaders);
     }
 
-    // API: Admin
     if (path === "/api/admin/leads" && request.method === "GET") {
       return handleAdminAuth(request, env, async () => {
         const result = await env.DB.prepare("SELECT * FROM leads ORDER BY created_at DESC LIMIT 200").all();
