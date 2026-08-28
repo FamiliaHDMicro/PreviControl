@@ -1,6 +1,124 @@
-// PrevControl — Worker backend (Fase 1: Custo Zero)
-import { getAllBenefits, getBenefitConfig, runTriagem, CLASSIFICATION_LABELS } from "./src/rules.js";
+// PrevControl — Worker backend (Tudo em um arquivo só)
 
+// === REGRAS EMBUTIDAS (antes era rules.js) ===
+const BENEFITS = {
+  aposentadoria_idade: {
+    label: "Aposentadoria por idade",
+    questions: [
+      { id: "age", label: "Qual sua idade?", type: "number", unit: "anos", required: true },
+      { id: "contrib_years", label: "Quantos anos de contribuição você tem?", type: "number", unit: "anos", required: true },
+      { id: "gender", label: "Você é homem ou mulher?", type: "choice", options: ["homem", "mulher"], required: true }
+    ],
+    evaluate(answers) {
+      const age = Number(answers.age);
+      const contrib = Number(answers.contrib_years);
+      const isMale = answers.gender === "homem";
+      if (!age || !contrib) return { class: "precisa_avaliacao", rationale: "Idade ou tempo de contribuição não informado." };
+      const minAge = isMale ? 65 : 62;
+      const minContrib = 15;
+      if (age >= minAge && contrib >= minContrib) return { class: "provavel_direito", rationale: `Atende idade mínima (${minAge}) e tempo de contribuição (${minContrib} anos).` };
+      if (age >= minAge - 2 && contrib >= minContrib) return { class: "precisa_avaliacao", rationale: `Próximo da idade mínima. Pode haver regra de transição.` };
+      return { class: "sem_direito", rationale: `Ainda não atingiu idade mínima (${minAge} anos) ou tempo de contribuição (${minContrib} anos).` };
+    }
+  },
+  aposentadoria_tempo: {
+    label: "Aposentadoria por tempo de contribuição",
+    questions: [
+      { id: "gender", label: "Você é homem ou mulher?", type: "choice", options: ["homem", "mulher"], required: true },
+      { id: "contrib_years", label: "Quantos anos de contribuição você tem?", type: "number", unit: "anos", required: true },
+      { id: "started_before_2019", label: "Você já contribuía antes de 13/11/2019?", type: "choice", options: ["sim", "nao"], required: true }
+    ],
+    evaluate(answers) {
+      const contrib = Number(answers.contrib_years);
+      const isMale = answers.gender === "homem";
+      const before2019 = answers.started_before_2019 === "sim";
+      const target = isMale ? 35 : 30;
+      if (contrib >= target && before2019) return { class: "provavel_direito", rationale: `Tempo de contribuição atingido (${contrib} anos). Entra nas regras de transição.` };
+      if (!before2019) return { class: "sem_direito", rationale: "Aposentadoria apenas por tempo de contribuição acabou na Reforma de 2019." };
+      return { class: "precisa_avaliacao", rationale: `Faltam ${target - contrib} anos de contribuição.` };
+    }
+  },
+  auxilio_doenca: {
+    label: "Auxílio-doença / Incapacidade",
+    questions: [
+      { id: "contrib_months", label: "Há quantos meses você contribui?", type: "number", unit: "meses", required: true },
+      { id: "incapacity", label: "Você está impossibilitado de trabalhar por motivo de saúde?", type: "choice", options: ["sim", "nao"], required: true },
+      { id: "has_medical_report", label: "Você tem laudo ou atestado médico?", type: "choice", options: ["sim", "nao"], required: true }
+    ],
+    evaluate(answers) {
+      const contribMonths = Number(answers.contrib_months);
+      const incapacitated = answers.incapacity === "sim";
+      const hasReport = answers.has_medical_report === "sim";
+      if (!incapacitated) return { class: "sem_direito", rationale: "Auxílio-doença é exclusivo para quem está temporariamente impossibilitado de trabalhar." };
+      if (contribMonths >= 12 && hasReport) return { class: "provavel_direito", rationale: "Carência de 12 meses atingida e laudo médico apresentado." };
+      if (contribMonths >= 12 && !hasReport) return { class: "precisa_avaliacao", rationale: "Você tem a carência, mas precisa do laudo médico para a perícia." };
+      return { class: "precisa_avaliacao", rationale: `Faltam ${12 - contribMonths} meses de carência (ou pode ser dispensada em casos de acidente/doença grave).` };
+    }
+  },
+  salario_maternidade: {
+    label: "Salário-maternidade",
+    questions: [
+      { id: "contrib_months", label: "Há quantos meses você contribui?", type: "number", unit: "meses", required: true },
+      { id: "situation", label: "Qual sua situação?", type: "choice", options: ["Estou grávida", "Meu filho já nasceu", "Adotei ou tenho guarda judicial"], required: true }
+    ],
+    evaluate(answers) {
+      const contribMonths = Number(answers.contrib_months);
+      if (contribMonths >= 10) return { class: "provavel_direito", rationale: "Carência de 10 meses atingida." };
+      return { class: "precisa_avaliacao", rationale: `Faltam ${10 - contribMonths} meses de carência.` };
+    }
+  },
+  pensao_morte: {
+    label: "Pensão por morte",
+    questions: [
+      { id: "relationship", label: "Qual seu parentesco com quem faleceu?", type: "choice", options: ["Marido/Esposa ou União Estável", "Filho(a) menor de 21 anos", "Filho(a) maior de 21 anos", "Pai ou Mãe", "Irmão(ã)"], required: true },
+      { id: "deceased_contributed", label: "Quem faleceu pagava INSS ou era aposentado?", type: "choice", options: ["sim", "nao", "nao_sei"], required: true }
+    ],
+    evaluate(answers) {
+      if (answers.deceased_contributed === "nao") return { class: "sem_direito", rationale: "Para pensão por morte, quem faleceu precisava ser segurado do INSS." };
+      const eligible = ["Marido/Esposa ou União Estável", "Filho(a) menor de 21 anos", "Pai ou Mãe"];
+      if (eligible.includes(answers.relationship)) return { class: "provavel_direito", rationale: "Você é dependente direto e há grande chance de direito à pensão." };
+      return { class: "precisa_avaliacao", rationale: "Precisamos analisar seu caso especificamente." };
+    }
+  },
+  bpc_loas: {
+    label: "BPC / LOAS",
+    questions: [
+      { id: "age", label: "Quantos anos você tem?", type: "number", unit: "anos", required: true },
+      { id: "incapacity", label: "Você tem alguma deficiência que dificulta sua vida independente?", type: "choice", options: ["sim", "nao"], required: true },
+      { id: "family_income", label: "A renda por pessoa da sua casa é menor que 1/4 do salário mínimo?", type: "choice", options: ["sim", "nao", "nao_sei"], required: true }
+    ],
+    evaluate(answers) {
+      const age = Number(answers.age);
+      const hasDeficiency = answers.incapacity === "sim";
+      const lowIncome = answers.family_income === "sim";
+      if ((age >= 65 || hasDeficiency) && lowIncome) return { class: "provavel_direito", rationale: "Você atende aos critérios de idade/deficiência e renda." };
+      if (age < 65 && !hasDeficiency) return { class: "sem_direito", rationale: "BPC exige 65 anos ou mais, ou deficiência comprovada." };
+      return { class: "precisa_avaliacao", rationale: "Precisamos analisar melhor sua situação de renda." };
+    }
+  }
+};
+
+const CLASSIFICATION_LABELS = {
+  provavel_direito: "✅ Provável Direito",
+  precisa_avaliacao: "⚠️ Precisa de Análise do Cleiton",
+  sem_direito: "❌ Sem Direito no Momento"
+};
+
+function getAllBenefits() {
+  return Object.entries(BENEFITS).map(([key, config]) => ({ key, label: config.label, questions: config.questions }));
+}
+
+function getBenefitConfig(benefitType) {
+  return BENEFITS[benefitType] || null;
+}
+
+function runTriagem(benefitType, answers) {
+  const config = BENEFITS[benefitType];
+  if (!config) return { class: "precisa_avaliacao", rationale: "Tipo de benefício não reconhecido." };
+  return config.evaluate(answers);
+}
+
+// === WORKER PRINCIPAL ===
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -16,26 +134,27 @@ export default {
       return new Response(null, { headers: corsHeaders });
     }
 
+    // Servir arquivos estáticos
+    if (path === "/" || !path.startsWith("/api/")) {
+      if (env.ASSETS) {
+        return env.ASSETS.fetch(request);
+      }
+    }
+
+    // API: Lista de benefícios
     if (path === "/api/benefits" && request.method === "GET") {
       return json({ benefits: getAllBenefits() }, corsHeaders);
     }
 
+    // API: Triagem
     if (path === "/api/triagem" && request.method === "POST") {
       return handleTriagem(request, env, corsHeaders);
     }
 
+    // API: Admin
     if (path === "/api/admin/leads" && request.method === "GET") {
       return handleAdminAuth(request, env, async () => {
-        const filter = url.searchParams.get("classification");
-        const status = url.searchParams.get("status");
-        let query = "SELECT * FROM leads";
-        const conditions = [];
-        const params = [];
-        if (filter) { conditions.push("classification = ?"); params.push(filter); }
-        if (status) { conditions.push("status = ?"); params.push(status); }
-        if (conditions.length) query += " WHERE " + conditions.join(" AND ");
-        query += " ORDER BY created_at DESC LIMIT 200";
-        const result = await env.DB.prepare(query).bind(...params).all();
+        const result = await env.DB.prepare("SELECT * FROM leads ORDER BY created_at DESC LIMIT 200").all();
         return json({ leads: result.results }, corsHeaders);
       }, corsHeaders);
     }
@@ -44,21 +163,10 @@ export default {
       return handleAdminAuth(request, env, async () => {
         const body = await request.json();
         const { status, notes, id } = body;
-        if (!id) return json({ error: "id é obrigatório" }, corsHeaders, 400);
-        const updates = [];
-        const params = [];
-        if (status) { updates.push("status = ?"); params.push(status); }
-        if (notes !== undefined) { updates.push("notes = ?"); params.push(notes); }
-        if (status === "contatado") { updates.push("contacted_at = datetime('now')"); }
-        if (!updates.length) return json({ error: "Nada para atualizar" }, corsHeaders, 400);
-        params.push(id);
-        await env.DB.prepare(`UPDATE leads SET ${updates.join(", ")} WHERE id = ?`).bind(...params).run();
+        if (!id) return json({ error: "id obrigatório" }, corsHeaders, 400);
+        await env.DB.prepare(`UPDATE leads SET status = ?, notes = ? WHERE id = ?`).bind(status || 'novo', notes || '', id).run();
         return json({ ok: true }, corsHeaders);
       }, corsHeaders);
-    }
-
-    if (env.ASSETS) {
-      return env.ASSETS.fetch(request);
     }
 
     return new Response("Página não encontrada", { status: 404 });
@@ -79,12 +187,10 @@ async function handleTriagem(request, env, corsHeaders) {
 
     const result = runTriagem(benefit_type, answers);
 
-    const stmt = env.DB.prepare(
+    await env.DB.prepare(
       `INSERT INTO leads (name, phone, email, benefit_type, answers_json, classification, rationale, status) 
        VALUES (?, ?, ?, ?, ?, ?, ?, 'novo')`
-    ).bind(name, phone, email || null, benefit_type, JSON.stringify(answers), result.class, result.rationale);
-    
-    await stmt.run();
+    ).bind(name, phone, email || null, benefit_type, JSON.stringify(answers), result.class, result.rationale).run();
 
     const waMsg = encodeURIComponent(
       `Olá Cleiton! Sou *${name}*.\nTriagem: *${config.label}*.\nResultado: ${CLASSIFICATION_LABELS[result.class]}.\nResumo: ${result.rationale}`
@@ -99,7 +205,7 @@ async function handleTriagem(request, env, corsHeaders) {
     }, corsHeaders);
 
   } catch (e) {
-    return json({ error: "Erro interno: " + e.message }, corsHeaders, 500);
+    return json({ error: "Erro: " + e.message }, corsHeaders, 500);
   }
 }
 
