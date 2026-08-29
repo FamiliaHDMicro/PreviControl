@@ -5,7 +5,7 @@ export default {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PrevControl — Triagem de Benefícios</title>
+  <title>PrevConsulta — Triagem de Benefícios</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     .bg-grid {
@@ -106,7 +106,7 @@ export default {
       <div class="flex justify-between items-center border-b border-blue-800/40 pb-4">
         <div>
           <span class="text-blue-400 text-xs font-mono">// GESTÃO DE ATENDIMENTOS</span>
-          <h3 class="text-lg font-bold text-white">Painel de Controle de Leads</h3>
+          <h3 class="text-lg font-bold text-white">Painel PrevConsulta</h3>
         </div>
         <button onclick="togglePainel(false)" class="text-slate-400 hover:text-white font-bold text-xl">✕</button>
       </div>
@@ -146,7 +146,7 @@ export default {
   </div>
 
   <footer class="border-t border-blue-900/40 py-4 text-center text-xs text-slate-500 font-mono">
-    PrevConsulta © 2026.
+    PrevConsulta © 2026 — Sistema de Triagem Direta
   </footer>
 
   <script>
@@ -154,7 +154,7 @@ export default {
       aposentadoria_idade: {
         label: "Aposentadoria por Idade",
         questions: [
-          { id: "sexo", label: "Sexo Biológico", type: "choice", options: ["mulher", "homem"] },
+          { id: "sexo", label: "Gênero no documento oficial / CPF", type: "choice", options: ["mulher", "homem"] },
           { id: "idade", label: "Sua idade atual", type: "number", min: 18, max: 100 },
           { id: "tempo_anos", label: "Tempo de contribuição (Anos)", type: "number", min: 0, max: 70 },
           { id: "tempo_meses", label: "Tempo de contribuição (Meses)", type: "number", min: 0, max: 11 }
@@ -294,9 +294,9 @@ export default {
         status: 'Pendente'
       };
 
-      const leadsAtuais = JSON.parse(localStorage.getItem('prev_leads') || '[]');
+      const leadsAtuais = JSON.parse(localStorage.getItem('prevconsulta_leads') || '[]');
       leadsAtuais.unshift(lead);
-      localStorage.setItem('prev_leads', JSON.stringify(leadsAtuais));
+      localStorage.setItem('prevconsulta_leads', JSON.stringify(leadsAtuais));
       atualizarTabelaLeads();
 
       const msg = encodeURIComponent(\`Olá! Meu nome é \${nome}.\nAssunto: \${BENEFIT_CONFIGS[benefitAtual].label}\nResultado da Triagem: \${CLASSIFICATION_LABELS[res.class]}\nResumo: \${res.rationale}\`);
@@ -325,7 +325,7 @@ export default {
     }
 
     function atualizarTabelaLeads() {
-      const leads = JSON.parse(localStorage.getItem('prev_leads') || '[]');
+      const leads = JSON.parse(localStorage.getItem('prevconsulta_leads') || '[]');
       const tbody = document.getElementById('tabla-leads');
       tbody.innerHTML = '';
 
@@ -351,12 +351,12 @@ export default {
     }
 
     function marcarAtendido(id) {
-      let leads = JSON.parse(localStorage.getItem('prev_leads') || '[]');
+      let leads = JSON.parse(localStorage.getItem('prevconsulta_leads') || '[]');
       leads = leads.map(l => {
         if (l.id === id) l.status = l.status === 'Pendente' ? 'Atendido' : 'Pendente';
         return l;
       });
-      localStorage.setItem('prev_leads', JSON.stringify(leads));
+      localStorage.setItem('prevconsulta_leads', JSON.stringify(leads));
       atualizarTabelaLeads();
     }
   </script>
