@@ -1,5 +1,12 @@
 {
   "name": "prevconsulta",
   "main": "index.js",
-  "compatibility_date": "2026-08-28"
+  "compatibility_date": "2026-08-28",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "prevcontrole-db",
+      "database_id": "b03bac58-6c5d-436a-8116-a7b14be155e1"
+    }
+  ]
 }
