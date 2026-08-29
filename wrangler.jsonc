@@ -1,13 +1,5 @@
 {
   "name": "prevcontrol",
   "main": "index.js",
-  "compatibility_date": "2026-08-28",
-  "assets": {
-    "directory": ".",
-    "binding": "ASSETS"
-  },
-  "vars": {
-    "ADMIN_TOKEN": "senha123",
-    "WHATSAPP_NUMBER": "5511999999999"
-  }
+  "compatibility_date": "2026-08-28"
 }
