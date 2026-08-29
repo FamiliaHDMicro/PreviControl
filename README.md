@@ -11,7 +11,7 @@ Sistema de triagem preliminar de direitos previdenciários desenvolvido no model
 
 ## ⚙️ Arquitetura do Sistema
 
-* **Terminal Burro / Landing Page:** Interface leve que roda direto na nuvem sem necessidade de armazenamento local pesado no dispositivo do cliente.
+* **Terminal Burro / Landing Page:** Interface leve que roda direto na nuvem sem necessidade de armazenamento local pensado no dispositivo do cliente.
 * **Painel de Controle:** Área restrita para gestão de leads e configurações de atendimento.
 * **Custo Zero:** Funciona 100% dentro do plano gratuito da Cloudflare e sem custos de API externa da Meta.
 
