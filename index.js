@@ -3,14 +3,17 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    // --- CREDENCIAIS DOS USUÁRIOS DO PAINEL ---
+    // --- TELEFONE PADRÃO DE ATENDIMENTO DO ESCRITÓRIO ---
+    const DEFAULT_PHONE = "5517991087449";
+
+    // --- CREDENCIAIS DOS USUÁRIOS DO PAINEL (Lendo das Variáveis de Ambiente) ---
     const USERS_DATABASE = [
       { user: "admin", pass: env.ADMIN_TOKEN || "admin7449", role: "Administrador (Cleiton)" },
-      { user: "atendimento1", pass: "user123", role: "Atendente 01" },
-      { user: "atendimento2", pass: "user1234", role: "Atendente 02" }
+      { user: "atendimento1", pass: env.USER1_TOKEN || "user123", role: "Atendente 01" },
+      { user: "atendimento2", pass: env.USER2_TOKEN || "user1234", role: "Atendente 02" }
     ];
 
-    // --- ROTA DE SEGURANÇA: Valida Usuário e Senha no Servidor ---
+    // --- ROTA DE SEGURANÇA: Validação de Login no Servidor ---
     if (path === "/api/admin/login" && request.method === "POST") {
       try {
         const body = await request.json();
@@ -21,113 +24,124 @@ export default {
         if (!foundUser) {
           return new Response(JSON.stringify({ error: "Usuário ou senha incorretos!" }), {
             status: 401,
-            headers: { "content-type": "application/json" }
+            headers: { "content-type": "application/json;charset=UTF-8" }
           });
         }
 
         return new Response(JSON.stringify({ ok: true, role: foundUser.role }), {
           status: 200,
-          headers: { "content-type": "application/json" }
+          headers: { "content-type": "application/json;charset=UTF-8" }
         });
       } catch (e) {
         return new Response(JSON.stringify({ error: "Erro na requisição" }), { status: 400 });
       }
     }
 
-    // --- ROTA PRINCIPAL: Landing Page (Terminal Burro) ---
+    // --- ROTA DA API: Salvar Lead no Banco de Dados D1 ---
+    if (path === "/api/leads" && request.method === "POST") {
+      try {
+        const body = await request.json();
+        if (env.DB) {
+          await env.DB.prepare(
+            "INSERT INTO leads (nome, telefone, resumo, data) VALUES (?, ?, ?, ?)"
+          ).bind(body.nome, body.telefone, body.resumo, new Date().toISOString()).run();
+        }
+        return new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { "content-type": "application/json;charset=UTF-8" }
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ ok: false, message: "Erro ao salvar no banco" }), { status: 500 });
+      }
+    }
+
+    // --- RENDERIZAÇÃO DA INTERFACE (HTML / CSS / JS CLIENTE) ---
     const html = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PrevConsulta — Triagem de Benefícios</title>
+  <title>PrevConsulta - Triagem Previdenciária</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    .bg-grid {
-      background-size: 24px 24px;
-      background-image: 
-        linear-gradient(to right, rgba(30, 58, 138, 0.15) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(30, 58, 138, 0.15) 1px, transparent 1px);
-    }
-  </style>
 </head>
-<body class="bg-[#0b132c] text-slate-100 min-h-screen font-sans bg-grid flex flex-col justify-between">
+<body class="bg-[#0b132c] text-slate-100 min-h-screen flex items-center justify-center p-4">
 
-  <!-- Header -->
-  <header class="border-b border-blue-900/40 bg-[#0b132c]/95 backdrop-blur sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center font-bold text-white shadow-lg shadow-blue-600/50">P</div>
-        <span class="font-bold text-lg tracking-wide text-white">PREV<span class="text-blue-500">CONSULTA</span></span>
+  <div class="bg-[#0b132c] text-slate-100 p-8 rounded-xl max-w-xl w-full border border-blue-900/50 shadow-2xl relative overflow-hidden">
+    <div class="absolute inset-0 bg-[linear-gradient(to_right,#1e293b15_1px,transparent_1px),linear-gradient(to_bottom,#1e293b15_1px,transparent_1px)] bg-[size:14px_24px]"></div>
+    
+    <div class="relative z-10">
+      <div class="border-b border-blue-900/40 pb-4 mb-6 flex justify-between items-center">
+        <div>
+          <span class="text-blue-400 text-xs font-mono tracking-widest uppercase">// SIMULAÇÃO PREVIDENCIÁRIA</span>
+          <h2 class="text-2xl font-bold mt-1 text-white">Análise Preliminar de Benefício</h2>
+        </div>
+        <button onclick="abrirLoginModal()" class="text-xs text-slate-400 hover:text-blue-400 font-mono underline">Área Restrita</button>
       </div>
-      <button onclick="solicitarAcessoPainel()" class="bg-blue-600/20 border border-blue-500/40 text-blue-400 hover:bg-blue-600 hover:text-white px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2">
-        🔒 PAINEL DO ESCRITÓRIO
-      </button>
-    </div>
-  </header>
 
-  <!-- Conteúdo Principal -->
-  <main class="max-w-7xl mx-auto px-6 py-12 grid lg:grid-cols-12 gap-12 items-center flex-1">
-    <div class="lg:col-span-6 space-y-6">
-      <span class="px-3 py-1 rounded-full bg-blue-950 border border-blue-800 text-blue-400 text-xs font-mono">
-        SISTEMA DE TRIAGEM RÁPIDA
-      </span>
-      <h1 class="text-4xl lg:text-5xl font-black text-white leading-tight">
-        Análise preliminar de direitos previdenciários.
-      </h1>
-      <p class="text-slate-400 text-base">
-        Responda a poucas perguntas para obter o diagnóstico imediato e enviar o resumo diretamente ao nosso atendimento.
-      </p>
-    </div>
-
-    <!-- Formulário -->
-    <div class="lg:col-span-6">
-      <div class="bg-[#132043] border border-blue-800/50 rounded-2xl p-6 lg:p-8 shadow-2xl">
-        <div id="step-1" class="space-y-4">
-          <h2 class="text-xl font-bold text-white border-b border-blue-800/40 pb-3">Selecione o assunto:</h2>
-          <button onclick="iniciarQuiz('aposentadoria_idade')" class="w-full p-4 rounded-xl bg-[#0b132c] border border-blue-800/40 text-left hover:border-blue-500 hover:bg-blue-900/20 transition flex justify-between items-center group">
-            <div>
-              <div class="font-bold text-white group-hover:text-blue-400">Aposentadoria por Idade</div>
-              <div class="text-xs text-slate-400">Mulher (62+) ou Homem (65+)</div>
-            </div>
-            <span class="text-blue-500 font-bold">→</span>
-          </button>
-          <button onclick="iniciarQuiz('auxilio_doenca')" class="w-full p-4 rounded-xl bg-[#0b132c] border border-blue-800/40 text-left hover:border-blue-500 hover:bg-blue-900/20 transition flex justify-between items-center group">
-            <div>
-              <div class="font-bold text-white group-hover:text-blue-400">Auxílio-Doença</div>
-              <div class="text-xs text-slate-400">Incapacidade por motivo de saúde</div>
-            </div>
-            <span class="text-blue-500 font-bold">→</span>
-          </button>
+      <form id="form-triagem" class="space-y-4" onsubmit="processarTriagem(event)">
+        <div>
+          <label class="block text-xs font-mono text-slate-300 uppercase mb-1">Nome Completo</label>
+          <input type="text" id="nome" required placeholder="Digite seu nome" class="w-full bg-[#132043] border border-blue-800/50 rounded-lg p-2.5 text-white text-sm outline-none focus:border-blue-500">
         </div>
 
-        <div id="step-2" class="space-y-4 hidden">
-          <div id="questions-box" class="space-y-4"></div>
-          <div class="pt-4 border-t border-blue-800/40 space-y-3">
-            <label class="block text-xs font-mono text-slate-300 uppercase">Seus Dados para Contato:</label>
-            <input type="text" id="user-name" placeholder="Seu Nome Completo" class="w-full bg-[#0b132c] border border-blue-800/50 rounded-lg p-3 text-white text-sm outline-none focus:border-blue-500">
-            <input type="tel" id="user-phone" placeholder="Seu WhatsApp com DDD" class="w-full bg-[#0b132c] border border-blue-800/50 rounded-lg p-3 text-white text-sm outline-none focus:border-blue-500">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-mono text-slate-300 uppercase mb-1">Sexo Biológico</label>
+            <select id="sexo" class="w-full bg-[#132043] border border-blue-800/50 rounded-lg p-2.5 text-white text-sm outline-none focus:border-blue-500">
+              <option value="M">Masculino</option>
+              <option value="F">Feminino</option>
+            </select>
           </div>
-          <div class="flex gap-3 pt-2">
-            <button onclick="resetar()" class="w-1/3 bg-[#0b132c] border border-blue-800/40 text-slate-300 font-semibold py-3 rounded-lg hover:bg-blue-900/30 text-sm">Voltar</button>
-            <button onclick="gerarResultado()" class="w-2/3 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg shadow-lg text-sm">Ver Resultado</button>
+          <div>
+            <label class="block text-xs font-mono text-slate-300 uppercase mb-1">Idade Atual</label>
+            <input type="number" id="idade" required placeholder="Ex: 58" class="w-full bg-[#132043] border border-blue-800/50 rounded-lg p-2.5 text-white text-sm outline-none focus:border-blue-500">
           </div>
         </div>
 
-        <div id="step-3" class="space-y-4 hidden">
-          <div id="result-box" class="p-4 rounded-xl border"></div>
-          <a id="btn-wa" href="#" target="_blank" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 rounded-lg flex items-center justify-center gap-2 shadow-lg text-sm">
-            Enviar para Atendimento no WhatsApp →
-          </a>
-          <button onclick="resetar()" class="w-full text-center text-xs text-slate-400 hover:text-white pt-1">Nova Simulação</button>
+        <div>
+          <label class="block text-xs font-mono text-slate-300 uppercase mb-1">Tempo de Contribuição / Trabalhado (Anos)</label>
+          <input type="number" id="tempo" required placeholder="Ex: 25" class="w-full bg-[#132043] border border-blue-800/50 rounded-lg p-2.5 text-white text-sm outline-none focus:border-blue-500">
         </div>
+
+        <div>
+          <label class="block text-xs font-mono text-slate-300 uppercase mb-1">Já contribuiu como MEI ou Trabalhador Rural?</label>
+          <select id="especial" class="w-full bg-[#132043] border border-blue-800/50 rounded-lg p-2.5 text-white text-sm outline-none focus:border-blue-500">
+            <option value="nao">Não, apenas CLT ou Carnê individual</option>
+            <option value="mei">Sim, possui tempo como MEI</option>
+            <option value="rural">Sim, possui tempo Rural/Agricultor</option>
+            <option value="ambos">Ambos (MEI e Rural)</option>
+          </select>
+        </div>
+
+        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition-all text-sm uppercase tracking-wide">
+          Gerar Análise e Enviar no WhatsApp
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL LOGIN PAINEL -->
+  <div id="modal-login" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-[#132043] border border-blue-800 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
+      <h3 class="text-lg font-bold text-white border-b border-blue-800/40 pb-2">Acesso ao Painel</h3>
+      <div>
+        <label class="block text-xs font-mono text-slate-300 mb-1">Usuário</label>
+        <input type="text" id="user-login" class="w-full bg-[#0b132c] border border-blue-800/50 rounded-lg p-2 text-white text-sm outline-none">
+      </div>
+      <div>
+        <label class="block text-xs font-mono text-slate-300 mb-1">Senha</label>
+        <input type="password" id="pass-login" class="w-full bg-[#0b132c] border border-blue-800/50 rounded-lg p-2 text-white text-sm outline-none">
+      </div>
+      <div class="flex gap-2">
+        <button onclick="autenticarUsuario()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-lg font-bold text-xs">Entrar</button>
+        <button onclick="fecharLoginModal()" class="w-full bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-lg font-bold text-xs">Cancelar</button>
       </div>
     </div>
-  </main>
+  </div>
 
-  <!-- PAINEL DO ESCRITÓRIO (PROTEGIDO) -->
+  <!-- MODAL PAINEL DO ESCRITÓRIO -->
   <div id="modal-painel" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-[#132043] border border-blue-800 rounded-2xl max-w-4xl w-full p-6 space-y-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+    <div class="bg-[#132043] border border-blue-800 rounded-2xl max-w-md w-full p-6 space-y-6 shadow-2xl">
       <div class="flex justify-between items-center border-b border-blue-800/40 pb-4">
         <div>
           <span class="text-blue-400 text-xs font-mono">// GESTÃO DE ATENDIMENTOS</span>
@@ -139,278 +153,82 @@ export default {
       <div class="bg-[#0b132c] p-4 rounded-xl border border-blue-800/40 space-y-3">
         <label class="block text-xs font-mono text-slate-300 uppercase">Número do WhatsApp do Escritório (com DDD):</label>
         <div class="flex gap-2">
-          <input type="text" id="cfg-phone" placeholder="5517999999999" class="w-full bg-[#132043] border border-blue-800/50 rounded-lg p-2.5 text-white text-sm outline-none">
+          <input type="text" id="cfg-phone" placeholder="5517991087449" class="w-full bg-[#132043] border border-blue-800/50 rounded-lg p-2.5 text-white text-sm outline-none">
           <button onclick="salvarConfig()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap">Salvar Número</button>
-        </div>
-      </div>
-
-      <div class="space-y-3">
-        <h4 class="text-sm font-bold text-white uppercase font-mono">Triagens Gravadas no Navegador Local:</h4>
-        <div class="overflow-x-auto border border-blue-800/40 rounded-xl">
-          <table class="w-full text-left text-xs text-slate-300">
-            <thead class="bg-[#0b132c] text-blue-400 font-mono uppercase">
-              <tr>
-                <th class="p-3">Data</th>
-                <th class="p-3">Nome</th>
-                <th class="p-3">Telefone</th>
-                <th class="p-3">Assunto</th>
-                <th class="p-3">Status</th>
-                <th class="p-3">Ação</th>
-              </tr>
-            </thead>
-            <tbody id="tabla-leads" class="divide-y divide-blue-800/30 bg-[#132043]"></tbody>
-          </table>
         </div>
       </div>
     </div>
   </div>
 
-  <footer class="border-t border-blue-900/40 py-4 text-center text-xs text-slate-500 font-mono">
-    PrevConsulta © 2026 — Sistema de Triagem Direta
-  </footer>
-
   <script>
-    const BENEFIT_CONFIGS = {
-      aposentadoria_idade: {
-        label: "Aposentadoria por Idade",
-        questions: [
-          { id: "sexo", label: "Gênero no documento oficial / CPF", type: "choice", options: ["mulher", "homem"] },
-          { id: "idade", label: "Sua idade atual", type: "number", min: 18, max: 100 },
-          { id: "tempo_anos", label: "Tempo de contribuição (Anos)", type: "number", min: 0, max: 70 },
-          { id: "tempo_meses", label: "Tempo de contribuição (Meses)", type: "number", min: 0, max: 11 }
-        ]
-      },
-      auxilio_doenca: {
-        label: "Auxílio-Doença / Incapacidade",
-        questions: [
-          { id: "laudo", label: "Possui laudo médico recente?", type: "choice", options: ["sim", "nao"] },
-          { id: "afastado", label: "Está afastado há mais de 15 dias?", type: "choice", options: ["sim", "nao"] }
-        ]
-      }
-    };
+    const DEFAULT_PHONE = "${DEFAULT_PHONE}";
 
-    const CLASSIFICATION_LABELS = {
-      provavel_direito: "✅ Provável Direito Encontrado",
-      precisa_avaliacao: "⚠️ Necessita Avaliação Detalhada",
-      sem_direito: "❌ Requisitos Mínimos Não Atingidos"
-    };
+    function abrirLoginModal() { document.getElementById('modal-login').classList.remove('hidden'); }
+    function fecharLoginModal() { document.getElementById('modal-login').classList.add('hidden'); }
+    function fecharPainel() { document.getElementById('modal-painel').classList.add('hidden'); }
 
-    function runTriagem(benefitKey, answers) {
-      if (benefitKey === 'aposentadoria_idade') {
-        const idade = parseInt(answers.idade || 0);
-        const anos = parseInt(answers.tempo_anos || 0);
-        const meses = parseInt(answers.tempo_meses || 0);
-        const tempoTotalAnos = anos + (meses / 12);
-        const sexo = answers.sexo;
+    async function autenticarUsuario() {
+      const u = document.getElementById('user-login').value;
+      const p = document.getElementById('pass-login').value;
 
-        const idadeMinima = sexo === 'mulher' ? 62 : 65;
-        const tempoMinimo = 15;
-
-        if (idade >= idadeMinima && tempoTotalAnos >= tempoMinimo) {
-          return { class: 'provavel_direito', rationale: \`Você atinge a idade mínima (\${idadeMinima} anos) e possui \${anos} anos e \${meses} meses de contribuição.\` };
-        } else {
-          return { class: 'sem_direito', rationale: \`Necessário \${idadeMinima} anos de idade e 15 anos de contribuição. Informado: \${anos} anos e \${meses} meses.\` };
-        }
-      }
-
-      if (benefitKey === 'auxilio_doenca') {
-        if (answers.laudo === 'sim' && answers.afastado === 'sim') {
-          return { class: 'provavel_direito', rationale: 'Com laudo e incapacidade continuada, o pedido de auxílio temporário é recomendado.' };
-        }
-        return { class: 'precisa_avaliacao', rationale: 'Recomendamos análise completa dos laudos pela equipe jurídica.' };
-      }
-
-      return { class: 'precisa_avaliacao', rationale: 'Dados iniciais coletados para análise do advogado.' };
-    }
-
-    let benefitAtual = null;
-    let respostas = {};
-    let configWhatsApp = localStorage.getItem('cfg_wa') || '5517999999999';
-
-    document.getElementById('cfg-phone').value = configWhatsApp;
-
-    // --- AUTENTICAÇÃO MULTI-USUÁRIO COM O SERVIDOR ---
-    async function solicitarAcessoPainel() {
-      const username = prompt("Usuário:");
-      if (!username) return;
-      const password = prompt("Senha:");
-      if (!password) return;
-
-      try {
-        const res = await fetch('/api/admin/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password })
-        });
-
-        const data = await res.json();
-
-        if (res.ok) {
-          document.getElementById('user-badge').textContent = \`(\${data.role})\`;
-          document.getElementById('modal-painel').classList.remove('hidden');
-          atualizarTabelaLeads();
-        } else {
-          alert(data.error || "Acesso Negado: Usuário ou senha incorretos!");
-        }
-      } catch(e) {
-        alert("Erro ao validar acesso com o servidor.");
-      }
-    }
-
-    function fecharPainel() {
-      document.getElementById('modal-painel').classList.add('hidden');
-    }
-
-    function iniciarQuiz(key) {
-      benefitAtual = key;
-      respostas = {};
-      const config = BENEFIT_CONFIGS[key];
-      const box = document.getElementById('questions-box');
-      box.innerHTML = '';
-
-      config.questions.forEach(q => {
-        const div = document.createElement('div');
-        div.className = 'space-y-1';
-        
-        const label = document.createElement('label');
-        label.className = 'block text-xs font-mono text-slate-300 uppercase';
-        label.textContent = q.label;
-        div.appendChild(label);
-
-        if (q.type === 'choice') {
-          const grid = document.createElement('div');
-          grid.className = 'grid grid-cols-2 gap-2';
-          q.options.forEach(opt => {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'p-3 rounded-lg bg-[#0b132c] border border-blue-800/40 text-xs font-bold uppercase hover:bg-blue-600 hover:text-white transition';
-            btn.textContent = opt;
-            btn.onclick = () => {
-              grid.querySelectorAll('button').forEach(b => b.className = 'p-3 rounded-lg bg-[#0b132c] border border-blue-800/40 text-xs font-bold uppercase hover:bg-blue-600 hover:text-white transition');
-              btn.className = 'p-3 rounded-lg bg-blue-600 border border-blue-500 text-xs font-bold uppercase text-white transition';
-              respostas[q.id] = opt;
-            };
-            grid.appendChild(btn);
-          });
-          div.appendChild(grid);
-        } else {
-          const input = document.createElement('input');
-          input.type = 'number';
-          input.min = q.min || 0;
-          input.max = q.max || 100;
-          input.placeholder = \`Ex: \${q.min || 0}\`;
-          input.className = 'w-full bg-[#0b132c] border border-blue-800/50 rounded-lg p-3 text-white text-sm outline-none focus:border-blue-500';
-          input.oninput = (e) => respostas[q.id] = e.target.value;
-          div.appendChild(input);
-        }
-
-        box.appendChild(div);
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: u, password: p })
       });
 
-      document.getElementById('step-1').classList.add('hidden');
-      document.getElementById('step-2').classList.remove('hidden');
-    }
-
-    function gerarResultado() {
-      const nome = document.getElementById('user-name').value;
-      const fone = document.getElementById('user-phone').value;
-
-      if (!nome || !fone) {
-        alert('Por favor, preencha seu nome e telefone WhatsApp.');
-        return;
+      if (res.ok) {
+        const data = await res.json();
+        fecharLoginModal();
+        document.getElementById('user-badge').innerText = '(' + data.role + ')';
+        document.getElementById('cfg-phone').value = localStorage.getItem('office_phone') || DEFAULT_PHONE;
+        document.getElementById('modal-painel').classList.remove('hidden');
+      } else {
+        alert('Usuário ou senha incorretos!');
       }
-
-      const res = runTriagem(benefitAtual, respostas);
-      const resultBox = document.getElementById('result-box');
-      const btnWa = document.getElementById('btn-wa');
-
-      const cores = {
-        provavel_direito: 'bg-emerald-950/50 border-emerald-500/40 text-emerald-300',
-        precisa_avaliacao: 'bg-amber-950/50 border-amber-500/40 text-amber-300',
-        sem_direito: 'bg-rose-950/50 border-rose-500/40 text-rose-300'
-      };
-
-      resultBox.className = \`p-4 rounded-xl border \${cores[res.class]}\`;
-      resultBox.innerHTML = \`
-        <div class="font-bold text-sm mb-1">\${CLASSIFICATION_LABELS[res.class]}</div>
-        <div class="text-xs opacity-90">\${res.rationale}</div>
-      \`;
-
-      const lead = {
-        id: Date.now(),
-        data: new Date().toLocaleDateString('pt-BR'),
-        nome: nome,
-        fone: fone,
-        assunto: BENEFIT_CONFIGS[benefitAtual].label,
-        resultado: CLASSIFICATION_LABELS[res.class],
-        status: 'Pendente'
-      };
-
-      const leadsAtuais = JSON.parse(localStorage.getItem('prevconsulta_leads') || '[]');
-      leadsAtuais.unshift(lead);
-      localStorage.setItem('prevconsulta_leads', JSON.stringify(leadsAtuais));
-
-      const msg = encodeURIComponent(\`Olá! Meu nome é \${nome}.\nAssunto: \${BENEFIT_CONFIGS[benefitAtual].label}\nResultado da Triagem: \${CLASSIFICATION_LABELS[res.class]}\nResumo: \${res.rationale}\`);
-      btnWa.href = \`https://wa.me/\${configWhatsApp}?text=\${msg}\`;
-
-      document.getElementById('step-2').classList.add('hidden');
-      document.getElementById('step-3').classList.remove('hidden');
-    }
-
-    function resetar() {
-      document.getElementById('step-2').classList.add('hidden');
-      document.getElementById('step-3').classList.add('hidden');
-      document.getElementById('step-1').classList.remove('hidden');
     }
 
     function salvarConfig() {
-      const num = document.getElementById('cfg-phone').value;
-      configWhatsApp = num;
-      localStorage.setItem('cfg_wa', num);
-      alert('Número salvo!');
-    }
-
-    function atualizarTabelaLeads() {
-      const leads = JSON.parse(localStorage.getItem('prevconsulta_leads') || '[]');
-      const tbody = document.getElementById('tabla-leads');
-      tbody.innerHTML = '';
-
-      if (leads.length === 0) {
-        tbody.innerHTML = \`<tr><td colspan="6" class="p-4 text-center text-slate-500">Nenhuma triagem realizada neste dispositivo.</td></tr>\`;
-        return;
+      const num = document.getElementById('cfg-phone').value.trim();
+      if(num) {
+        localStorage.setItem('office_phone', num);
+        alert('Número do WhatsApp salvo com sucesso!');
+        fecharPainel();
       }
-
-      leads.forEach(l => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = \`
-          <td class="p-3">\${l.data}</td>
-          <td class="p-3 font-bold text-white">\${l.nome}</td>
-          <td class="p-3">\${l.fone}</td>
-          <td class="p-3">\${l.assunto}</td>
-          <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] \${l.status === 'Atendido' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-amber-950 text-amber-400 border border-amber-800'}">\${l.status}</span></td>
-          <td class="p-3">
-            <button onclick="marcarAtendido(\${l.id})" class="text-blue-400 hover:underline">Alternar Status</button>
-          </td>
-        \`;
-        tbody.appendChild(tr);
-      });
     }
 
-    function marcarAtendido(id) {
-      let leads = JSON.parse(localStorage.getItem('prevconsulta_leads') || '[]');
-      leads = leads.map(l => {
-        if (l.id === id) l.status = l.status === 'Pendente' ? 'Atendido' : 'Pendente';
-        return l;
+    async function processarTriagem(e) {
+      e.preventDefault();
+      const nome = document.getElementById('nome').value;
+      const sexo = document.getElementById('sexo').value;
+      const idade = parseInt(document.getElementById('idade').value);
+      const tempo = parseInt(document.getElementById('tempo').value);
+      const especial = document.getElementById('especial').value;
+
+      let msgResumo = \`Olá! Sou \${nome}. Solicito análise de triagem previdenciária.\\n\\n\`;
+      msgResumo += \`- Sexo: \${sexo === 'M' ? 'Masculino' : 'Feminino'}\\n\`;
+      msgResumo += \`- Idade: \${idade} anos\\n\`;
+      msgResumo += \`- Tempo de Contribuição: \${tempo} anos\\n\`;
+      msgResumo += \`- Detalhes Especiais: \${especial.toUpperCase()}\\n\`;
+
+      // Salva no banco de dados SQLite (D1)
+      fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome, telefone: '', resumo: msgResumo })
       });
-      localStorage.setItem('prevconsulta_leads', JSON.stringify(leads));
-      atualizarTabelaLeads();
+
+      // Redireciona para o WhatsApp do Escritório (Cleiton)
+      const targetPhone = localStorage.getItem('office_phone') || DEFAULT_PHONE;
+      const urlWa = \`https://wa.me/\${targetPhone}?text=\${encodeURIComponent(msgResumo)}\`;
+      window.open(urlWa, '_blank');
     }
   </script>
 </body>
 </html>`;
 
     return new Response(html, {
-      headers: { "content-type": "text/html; charset=utf-8" }
+      headers: { "content-type": "text/html;charset=UTF-8" },
     });
   }
 };
