@@ -11,7 +11,7 @@ Sistema de triagem preliminar de direitos previdenciários desenvolvido no model
 
 ## ⚙️ Arquitetura do Sistema
 
-* **Terminal Burro / Landing Page:** Interface leve que roda direto na nuvem sem necessidade de armazenamento local pensado no dispositivo do cliente.
+* **Terminal Burro / Landing Page:** Interface ultraleve que roda direto na nuvem, sem ocupar espaço de armazenamento no dispositivo do cliente.
 * **Painel de Controle:** Área restrita para gestão de leads e configurações de atendimento.
 * **Custo Zero:** Funciona 100% dentro do plano gratuito da Cloudflare e sem custos de API externa da Meta.
 
@@ -20,3 +20,8 @@ Sistema de triagem preliminar de direitos previdenciários desenvolvido no model
 * `index.js` — Código-fonte principal com renderização de HTML, lógica de triagem e rotas de API.
 * `wrangler.jsonc` — Configuração de deploy da Cloudflare.
 * `README.md` — Documentação do projeto.
+
+## 🔐 Níveis de Acesso
+
+* **Administrador (`admin`):** Acesso completo a relatórios, configurações e gestão de usuários.
+* **Atendentes (`atendimento1`, `atendimento2`):** Acesso operacional para triagem de leads e redirecionamento.
