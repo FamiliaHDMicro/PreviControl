@@ -23,7 +23,7 @@ export default {
     <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
       <div class="flex items-center gap-3">
         <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center font-bold text-white shadow-lg shadow-blue-600/50">P</div>
-        <span class="font-bold text-lg tracking-wide text-white">PREV<span class="text-blue-500">CONTROL</span></span>
+        <span class="font-bold text-lg tracking-wide text-white">PREV<span class="text-blue-500">CONSULTA</span></span>
       </div>
       <button onclick="togglePainel(true)" class="bg-blue-600/20 border border-blue-500/40 text-blue-400 hover:bg-blue-600 hover:text-white px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2">
         📊 PAINEL DO ESCRITÓRIO
