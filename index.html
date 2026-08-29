@@ -1,113 +1,55 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PrevControl — Consulta Rápida</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,Segoe UI,sans-serif;background:#0f172a;color:#f1f5f9;line-height:1.6}
-.banner{background:#1e3a8a;padding:50px 20px;text-align:center;border-bottom:2px solid #3b82f6}
-.banner h1{color:#fff;font-size:42px;font-weight:800;margin-bottom:10px}
-.banner p{color:#bfdbfe;font-size:20px}
-.container{max-width:900px;margin:0 auto;padding:20px}
-.card{background:#1e293b;border-radius:12px;padding:28px;margin-bottom:20px;border:1px solid #334155}
-.card h2{color:#3b82f6;font-size:26px;font-weight:700;margin-bottom:18px}
-.btn{background:#3b82f6;color:#fff;border:none;padding:18px;border-radius:10px;font-size:18px;font-weight:700;cursor:pointer;width:100%;margin-top:14px;transition:all 0.2s}
-.btn:hover{background:#2563eb}
-.btn-grid{display:grid;gap:12px}
-.btn-option{background:#0f172a;border:2px solid #3b82f6;color:#f1f5f9;padding:18px;border-radius:10px;font-size:18px;text-align:left;cursor:pointer}
-.btn-option:hover,.btn-option.selected{background:#3b82f6;color:#fff}
-input,select{width:100%;padding:16px;border:2px solid #3b82f6;border-radius:10px;font-size:18px;margin-bottom:14px;background:#0f172a;color:#f1f5f9}
-input:focus,select:focus{outline:none;border-color:#60a5fa}
-.checklist-item{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid #334155;font-size:18px}
-.checklist-item input{width:22px;height:22px}
-.cin-alert{background:#1e3a8a;border:2px solid #3b82f6;border-radius:10px;padding:18px;margin:18px 0}
-.cin-alert strong{color:#60a5fa;font-size:18px}
-.whatsapp{background:#10b981;color:#fff;padding:20px;border-radius:10px;text-align:center;font-size:18px;font-weight:700;text-decoration:none;display:block;margin-top:18px}
-</style>
-</head>
-<body>
-<div class="banner">
-<h1>🏛️ PrevControl</h1>
-<p>Descubra se você tem direito — sem enrolação</p>
+<!-- Demos do Formulário no Tema Dark Urbano -->
+<div class="bg-zinc-950 text-white p-6 rounded-2xl max-w-xl mx-auto border border-zinc-800 font-sans shadow-2xl">
+  <!-- Topo -->
+  <div class="mb-6">
+    <span class="bg-orange-500/10 text-orange-400 text-xs font-bold px-3 py-1 rounded-full border border-orange-500/20">
+      TRIAGEM RÁPIDA
+    </span>
+    <h2 class="text-2xl font-black mt-3 text-zinc-100 tracking-tight">VAMOS VER SEUS DIREITOS, MANA?</h2>
+    <p class="text-zinc-400 text-sm mt-1">Responda às perguntas abaixo clicando nos botões. Sem enrolação.</p>
+  </div>
+
+  <!-- Etapa de Seleção de Benefício -->
+  <div id="step-1" class="space-y-4">
+    <label class="block text-xs font-bold text-zinc-400 uppercase tracking-wider">Qual é a sua dúvida hoje?</label>
+    
+    <div class="grid grid-cols-1 gap-3">
+      <button onclick="selectOption('benefit', 'aposentadoria_idade')" class="w-full text-left p-4 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-orange-500 hover:bg-zinc-850 transition flex justify-between items-center group">
+        <div>
+          <div class="font-bold text-white group-hover:text-orange-400">Aposentadoria por Idade</div>
+          <div class="text-xs text-zinc-400">Mulher (62+) ou Homem (65+)</div>
+        </div>
+        <span class="text-orange-500 font-bold">→</span>
+      </button>
+
+      <button onclick="selectOption('benefit', 'auxilio_doenca')" class="w-full text-left p-4 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-orange-500 hover:bg-zinc-850 transition flex justify-between items-center group">
+        <div>
+          <div class="font-bold text-white group-hover:text-orange-400">Auxílio-Doença</div>
+          <div class="text-xs text-zinc-400">Incapacidade por motivo de saúde</div>
+        </div>
+        <span class="text-orange-500 font-bold">→</span>
+      </button>
+
+      <button onclick="selectOption('benefit', 'trabalhista')" class="w-full text-left p-4 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-orange-500 hover:bg-zinc-850 transition flex justify-between items-center group">
+        <div>
+          <div class="font-bold text-white group-hover:text-orange-400">Direitos Trabalhistas</div>
+          <div class="text-xs text-zinc-400">Demissão, verbas rescisórias ou FGTS</div>
+        </div>
+        <span class="text-orange-500 font-bold">→</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Etapa de Múltipla Escolha (Dinamizada pelo JS) -->
+  <div id="step-2" class="space-y-4 mt-6 hidden">
+    <label class="block text-xs font-bold text-zinc-400 uppercase tracking-wider">Você tem laudo médico recente?</label>
+    <div class="grid grid-cols-2 gap-3">
+      <button class="p-4 rounded-xl bg-zinc-900 border border-zinc-800 font-bold hover:bg-orange-500 hover:text-black transition">
+        Sim, tenho
+      </button>
+      <button class="p-4 rounded-xl bg-zinc-900 border border-zinc-800 font-bold hover:bg-orange-500 hover:text-black transition">
+        Não tenho
+      </button>
+    </div>
+  </div>
 </div>
-<div class="container">
-<div class="card">
-<h2>1. O que você quer consultar?</h2>
-<div class="btn-grid" id="benefitList"></div>
-</div>
-<div class="card">
-<h2>2. Seus dados</h2>
-<input type="text" id="name" placeholder="Nome completo">
-<input type="tel" id="phone" placeholder="WhatsApp (com DDD)">
-<input type="email" id="email" placeholder="E-mail (opcional)">
-<button class="btn" onclick="goToStep(3)">Continuar</button>
-</div>
-<div class="card">
-<h2>3. Responda</h2>
-<div id="questions"></div>
-<button class="btn" onclick="submit()">Verificar meu direito</button>
-</div>
-<div class="card">
-<h2>4. Resultado</h2>
-<div id="result"></div>
-<div class="cin-alert">
-<strong>⚠️ Atenção: CIN</strong>
-<p>O INSS exige o CIN para biometria. Para tirar, leve: Certidão de Nascimento/Casamento, CPF e Comprovante de residência.</p>
-</div>
-<h3 style="color:#3b82f6;margin-top:18px;font-size:22px">📂 Checklist de documentos</h3>
-<div id="checklist"></div>
-<a href="#" class="whatsapp" id="waLink">Enviar resumo para o Cleiton no WhatsApp</a>
-</div>
-</div>
-<script>
-const benefits=[
-{key:'aposentadoria_idade',label:'Aposentadoria por Idade'},
-{key:'aposentadoria_tempo',label:'Aposentadoria por Tempo de Contribuição'},
-{key:'auxilio_doenca',label:'Auxílio-doença / Incapacidade'},
-{key:'salario_maternidade',label:'Salário-maternidade'},
-{key:'pensao_morte',label:'Pensão por morte'},
-{key:'bpc_loas',label:'BPC / LOAS'},
-{key:'trabalhista',label:'Direitos Trabalhistas'},
-{key:'revisao',label:'Revisão de Benefício'},
-{key:'mei',label:'Quero abrir um MEI'}
-];
-const docs={
-'aposentadoria_idade':['RG ou CIN','CPF','Certidão de Nascimento ou Casamento','Carteira de Trabalho','Carnês do INSS'],
-'auxilio_doenca':['RG ou CIN','CPF','Carteira de Trabalho','Laudos médicos com CID','Atestados e receitas','Exames e relatórios'],
-'bpc_loas':['RG/CIN e CPF de todos da casa','Carteira de Trabalho de todos','Comprovante de residência','Laudo médico','CadÚnico do CRAS']
-};
-let selected=null;
-function init(){
-const list=document.getElementById('benefitList');
-benefits.forEach(b=>{
-const btn=document.createElement('button');
-btn.className='btn-option';
-btn.textContent=b.label;
-btn.onclick=()=>{selected=b.key;list.querySelectorAll('.btn-option').forEach(x=>x.classList.remove('selected'));btn.classList.add('selected')};
-list.appendChild(btn);
-});
-}
-function goToStep(n){window.scrollTo({top:0,behavior:'smooth'})}
-function submit(){
-const name=document.getElementById('name').value;
-const phone=document.getElementById('phone').value;
-if(!name||!phone){alert('Preencha nome e WhatsApp');return}
-document.getElementById('result').innerHTML='<div style="background:#1e3a8a;padding:20px;border-radius:10px;border-left:4px solid #3b82f6"><h3 style="color:#60a5fa;font-size:22px">✅ Provável Direito</h3><p style="font-size:18px">Você atende aos critérios básicos. O Cleiton vai analisar seu caso.</p></div>';
-const d=docs[selected]||['RG ou CIN','CPF','Carteira de Trabalho'];
-const cl=document.getElementById('checklist');
-cl.innerHTML='';
-d.forEach(doc=>{
-const item=document.createElement('div');
-item.className='checklist-item';
-item.innerHTML=`<input type="checkbox"><label>${doc}</label>`;
-cl.appendChild(item);
-});
-const msg=encodeURIComponent(`Olá Cleiton! Sou ${name}. Fiz a triagem sobre ${selected}. Resultado: Provável Direito. Já separei: ${d.slice(0,3).join(', ')}.`);
-document.getElementById('waLink').href=`https://wa.me/?text=${msg}`;
-}
-init();
-</script>
-</body>
-</html>
