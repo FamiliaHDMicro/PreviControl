@@ -146,7 +146,7 @@ export default {
   </div>
 
   <footer class="border-t border-blue-900/40 py-4 text-center text-xs text-slate-500 font-mono">
-    PrevControl © 2026 — Sistema de Triagem Direta
+    PrevConsulta © 2026.
   </footer>
 
   <script>
