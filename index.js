@@ -1,5 +1,40 @@
 export default {
   async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+    const path = url.pathname;
+
+    // --- CREDENCIAIS DOS USUÁRIOS DO PAINEL ---
+    const USERS_DATABASE = [
+      { user: "admin", pass: env.ADMIN_TOKEN || "admin7449", role: "Administrador (Cleiton)" },
+      { user: "atendimento1", pass: "user123", role: "Atendente 01" },
+      { user: "atendimento2", pass: "user1234", role: "Atendente 02" }
+    ];
+
+    // --- ROTA DE SEGURANÇA: Valida Usuário e Senha no Servidor ---
+    if (path === "/api/admin/login" && request.method === "POST") {
+      try {
+        const body = await request.json();
+        const foundUser = USERS_DATABASE.find(
+          u => u.user === body.username && u.pass === body.password
+        );
+
+        if (!foundUser) {
+          return new Response(JSON.stringify({ error: "Usuário ou senha incorretos!" }), {
+            status: 401,
+            headers: { "content-type": "application/json" }
+          });
+        }
+
+        return new Response(JSON.stringify({ ok: true, role: foundUser.role }), {
+          status: 200,
+          headers: { "content-type": "application/json" }
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ error: "Erro na requisição" }), { status: 400 });
+      }
+    }
+
+    // --- ROTA PRINCIPAL: Landing Page (Terminal Burro) ---
     const html = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -25,16 +60,14 @@ export default {
         <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center font-bold text-white shadow-lg shadow-blue-600/50">P</div>
         <span class="font-bold text-lg tracking-wide text-white">PREV<span class="text-blue-500">CONSULTA</span></span>
       </div>
-      <button onclick="togglePainel(true)" class="bg-blue-600/20 border border-blue-500/40 text-blue-400 hover:bg-blue-600 hover:text-white px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2">
-        📊 PAINEL DO ESCRITÓRIO
+      <button onclick="solicitarAcessoPainel()" class="bg-blue-600/20 border border-blue-500/40 text-blue-400 hover:bg-blue-600 hover:text-white px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2">
+        🔒 PAINEL DO ESCRITÓRIO
       </button>
     </div>
   </header>
 
   <!-- Conteúdo Principal -->
   <main class="max-w-7xl mx-auto px-6 py-12 grid lg:grid-cols-12 gap-12 items-center flex-1">
-    
-    <!-- Lado Esquerdo -->
     <div class="lg:col-span-6 space-y-6">
       <span class="px-3 py-1 rounded-full bg-blue-950 border border-blue-800 text-blue-400 text-xs font-mono">
         SISTEMA DE TRIAGEM RÁPIDA
@@ -47,11 +80,9 @@ export default {
       </p>
     </div>
 
-    <!-- Lado Direito: Formulário -->
+    <!-- Formulário -->
     <div class="lg:col-span-6">
       <div class="bg-[#132043] border border-blue-800/50 rounded-2xl p-6 lg:p-8 shadow-2xl">
-        
-        <!-- Passo 1: Escolha -->
         <div id="step-1" class="space-y-4">
           <h2 class="text-xl font-bold text-white border-b border-blue-800/40 pb-3">Selecione o assunto:</h2>
           <button onclick="iniciarQuiz('aposentadoria_idade')" class="w-full p-4 rounded-xl bg-[#0b132c] border border-blue-800/40 text-left hover:border-blue-500 hover:bg-blue-900/20 transition flex justify-between items-center group">
@@ -70,23 +101,19 @@ export default {
           </button>
         </div>
 
-        <!-- Passo 2: Perguntas -->
         <div id="step-2" class="space-y-4 hidden">
           <div id="questions-box" class="space-y-4"></div>
-          
           <div class="pt-4 border-t border-blue-800/40 space-y-3">
             <label class="block text-xs font-mono text-slate-300 uppercase">Seus Dados para Contato:</label>
             <input type="text" id="user-name" placeholder="Seu Nome Completo" class="w-full bg-[#0b132c] border border-blue-800/50 rounded-lg p-3 text-white text-sm outline-none focus:border-blue-500">
             <input type="tel" id="user-phone" placeholder="Seu WhatsApp com DDD" class="w-full bg-[#0b132c] border border-blue-800/50 rounded-lg p-3 text-white text-sm outline-none focus:border-blue-500">
           </div>
-
           <div class="flex gap-3 pt-2">
             <button onclick="resetar()" class="w-1/3 bg-[#0b132c] border border-blue-800/40 text-slate-300 font-semibold py-3 rounded-lg hover:bg-blue-900/30 text-sm">Voltar</button>
             <button onclick="gerarResultado()" class="w-2/3 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg shadow-lg text-sm">Ver Resultado</button>
           </div>
         </div>
 
-        <!-- Passo 3: Resultado -->
         <div id="step-3" class="space-y-4 hidden">
           <div id="result-box" class="p-4 rounded-xl border"></div>
           <a id="btn-wa" href="#" target="_blank" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 rounded-lg flex items-center justify-center gap-2 shadow-lg text-sm">
@@ -94,24 +121,21 @@ export default {
           </a>
           <button onclick="resetar()" class="w-full text-center text-xs text-slate-400 hover:text-white pt-1">Nova Simulação</button>
         </div>
-
       </div>
     </div>
   </main>
 
-  <!-- PAINEL DE CONTROLE DO ESCRITÓRIO -->
+  <!-- PAINEL DO ESCRITÓRIO (PROTEGIDO) -->
   <div id="modal-painel" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
     <div class="bg-[#132043] border border-blue-800 rounded-2xl max-w-4xl w-full p-6 space-y-6 shadow-2xl max-h-[90vh] overflow-y-auto">
-      
       <div class="flex justify-between items-center border-b border-blue-800/40 pb-4">
         <div>
           <span class="text-blue-400 text-xs font-mono">// GESTÃO DE ATENDIMENTOS</span>
-          <h3 class="text-lg font-bold text-white">Painel PrevConsulta</h3>
+          <h3 class="text-lg font-bold text-white">Painel PrevConsulta <span id="user-badge" class="text-xs font-normal text-slate-400"></span></h3>
         </div>
-        <button onclick="togglePainel(false)" class="text-slate-400 hover:text-white font-bold text-xl">✕</button>
+        <button onclick="fecharPainel()" class="text-slate-400 hover:text-white font-bold text-xl">✕</button>
       </div>
 
-      <!-- Configuração de WhatsApp -->
       <div class="bg-[#0b132c] p-4 rounded-xl border border-blue-800/40 space-y-3">
         <label class="block text-xs font-mono text-slate-300 uppercase">Número do WhatsApp do Escritório (com DDD):</label>
         <div class="flex gap-2">
@@ -120,9 +144,8 @@ export default {
         </div>
       </div>
 
-      <!-- Tabela de Leads -->
       <div class="space-y-3">
-        <h4 class="text-sm font-bold text-white uppercase font-mono">Últimas Triagens Realizadas:</h4>
+        <h4 class="text-sm font-bold text-white uppercase font-mono">Triagens Gravadas no Navegador Local:</h4>
         <div class="overflow-x-auto border border-blue-800/40 rounded-xl">
           <table class="w-full text-left text-xs text-slate-300">
             <thead class="bg-[#0b132c] text-blue-400 font-mono uppercase">
@@ -135,13 +158,10 @@ export default {
                 <th class="p-3">Ação</th>
               </tr>
             </thead>
-            <tbody id="tabla-leads" class="divide-y divide-blue-800/30 bg-[#132043]">
-              <!-- Preenchido via JS -->
-            </tbody>
+            <tbody id="tabla-leads" class="divide-y divide-blue-800/30 bg-[#132043]"></tbody>
           </table>
         </div>
       </div>
-
     </div>
   </div>
 
@@ -208,6 +228,38 @@ export default {
     let configWhatsApp = localStorage.getItem('cfg_wa') || '5517999999999';
 
     document.getElementById('cfg-phone').value = configWhatsApp;
+
+    // --- AUTENTICAÇÃO MULTI-USUÁRIO COM O SERVIDOR ---
+    async function solicitarAcessoPainel() {
+      const username = prompt("Usuário:");
+      if (!username) return;
+      const password = prompt("Senha:");
+      if (!password) return;
+
+      try {
+        const res = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          document.getElementById('user-badge').textContent = \`(\${data.role})\`;
+          document.getElementById('modal-painel').classList.remove('hidden');
+          atualizarTabelaLeads();
+        } else {
+          alert(data.error || "Acesso Negado: Usuário ou senha incorretos!");
+        }
+      } catch(e) {
+        alert("Erro ao validar acesso com o servidor.");
+      }
+    }
+
+    function fecharPainel() {
+      document.getElementById('modal-painel').classList.add('hidden');
+    }
 
     function iniciarQuiz(key) {
       benefitAtual = key;
@@ -297,7 +349,6 @@ export default {
       const leadsAtuais = JSON.parse(localStorage.getItem('prevconsulta_leads') || '[]');
       leadsAtuais.unshift(lead);
       localStorage.setItem('prevconsulta_leads', JSON.stringify(leadsAtuais));
-      atualizarTabelaLeads();
 
       const msg = encodeURIComponent(\`Olá! Meu nome é \${nome}.\nAssunto: \${BENEFIT_CONFIGS[benefitAtual].label}\nResultado da Triagem: \${CLASSIFICATION_LABELS[res.class]}\nResumo: \${res.rationale}\`);
       btnWa.href = \`https://wa.me/\${configWhatsApp}?text=\${msg}\`;
@@ -310,11 +361,6 @@ export default {
       document.getElementById('step-2').classList.add('hidden');
       document.getElementById('step-3').classList.add('hidden');
       document.getElementById('step-1').classList.remove('hidden');
-    }
-
-    function togglePainel(abrir) {
-      document.getElementById('modal-painel').classList.toggle('hidden', !abrir);
-      if (abrir) atualizarTabelaLeads();
     }
 
     function salvarConfig() {
@@ -330,7 +376,7 @@ export default {
       tbody.innerHTML = '';
 
       if (leads.length === 0) {
-        tbody.innerHTML = \`<tr><td colspan="6" class="p-4 text-center text-slate-500">Nenhuma triagem realizada ainda.</td></tr>\`;
+        tbody.innerHTML = \`<tr><td colspan="6" class="p-4 text-center text-slate-500">Nenhuma triagem realizada neste dispositivo.</td></tr>\`;
         return;
       }
 
