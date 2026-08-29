@@ -1,218 +1,370 @@
-// PrevControl — Worker backend (Versão Única, sem imports externos)
-
-const BENEFITS = {
-  aposentadoria_idade: {
-    label: "Aposentadoria por idade",
-    questions: [
-      { id: "age", label: "Qual sua idade?", type: "number", unit: "anos", required: true },
-      { id: "contrib_years", label: "Quantos anos de contribuição você tem?", type: "number", unit: "anos", required: true },
-      { id: "gender", label: "Você é homem ou mulher?", type: "choice", options: ["homem", "mulher"], required: true }
-    ],
-    evaluate(answers) {
-      const age = Number(answers.age);
-      const contrib = Number(answers.contrib_years);
-      const isMale = answers.gender === "homem";
-      if (!age || !contrib) return { class: "precisa_avaliacao", rationale: "Idade ou tempo de contribuição não informado." };
-      const minAge = isMale ? 65 : 62;
-      const minContrib = 15;
-      if (age >= minAge && contrib >= minContrib) return { class: "provavel_direito", rationale: `Atende idade mínima (${minAge}) e tempo de contribuição (${minContrib} anos).` };
-      if (age >= minAge - 2 && contrib >= minContrib) return { class: "precisa_avaliacao", rationale: `Próximo da idade mínima. Pode haver regra de transição.` };
-      return { class: "sem_direito", rationale: `Ainda não atingiu idade mínima (${minAge} anos) ou tempo de contribuição (${minContrib} anos).` };
-    }
-  },
-  aposentadoria_tempo: {
-    label: "Aposentadoria por tempo de contribuição",
-    questions: [
-      { id: "gender", label: "Você é homem ou mulher?", type: "choice", options: ["homem", "mulher"], required: true },
-      { id: "contrib_years", label: "Quantos anos de contribuição você tem?", type: "number", unit: "anos", required: true },
-      { id: "started_before_2019", label: "Você já contribuía antes de 13/11/2019?", type: "choice", options: ["sim", "nao"], required: true }
-    ],
-    evaluate(answers) {
-      const contrib = Number(answers.contrib_years);
-      const isMale = answers.gender === "homem";
-      const before2019 = answers.started_before_2019 === "sim";
-      const target = isMale ? 35 : 30;
-      if (contrib >= target && before2019) return { class: "provavel_direito", rationale: `Tempo de contribuição atingido (${contrib} anos). Entra nas regras de transição.` };
-      if (!before2019) return { class: "sem_direito", rationale: "Aposentadoria apenas por tempo de contribuição acabou na Reforma de 2019." };
-      return { class: "precisa_avaliacao", rationale: `Faltam ${target - contrib} anos de contribuição.` };
-    }
-  },
-  auxilio_doenca: {
-    label: "Auxílio-doença / Incapacidade",
-    questions: [
-      { id: "contrib_months", label: "Há quantos meses você contribui?", type: "number", unit: "meses", required: true },
-      { id: "incapacity", label: "Você está impossibilitado de trabalhar por motivo de saúde?", type: "choice", options: ["sim", "nao"], required: true },
-      { id: "has_medical_report", label: "Você tem laudo ou atestado médico?", type: "choice", options: ["sim", "nao"], required: true }
-    ],
-    evaluate(answers) {
-      const contribMonths = Number(answers.contrib_months);
-      const incapacitated = answers.incapacity === "sim";
-      const hasReport = answers.has_medical_report === "sim";
-      if (!incapacitated) return { class: "sem_direito", rationale: "Auxílio-doença é exclusivo para quem está temporariamente impossibilitado de trabalhar." };
-      if (contribMonths >= 12 && hasReport) return { class: "provavel_direito", rationale: "Carência de 12 meses atingida e laudo médico apresentado." };
-      if (contribMonths >= 12 && !hasReport) return { class: "precisa_avaliacao", rationale: "Você tem a carência, mas precisa do laudo médico para a perícia." };
-      return { class: "precisa_avaliacao", rationale: `Faltam ${12 - contribMonths} meses de carência.` };
-    }
-  },
-  salario_maternidade: {
-    label: "Salário-maternidade",
-    questions: [
-      { id: "contrib_months", label: "Há quantos meses você contribui?", type: "number", unit: "meses", required: true },
-      { id: "situation", label: "Qual sua situação?", type: "choice", options: ["Estou grávida", "Meu filho já nasceu", "Adotei ou tenho guarda judicial"], required: true }
-    ],
-    evaluate(answers) {
-      const contribMonths = Number(answers.contrib_months);
-      if (contribMonths >= 10) return { class: "provavel_direito", rationale: "Carência de 10 meses atingida." };
-      return { class: "precisa_avaliacao", rationale: `Faltam ${10 - contribMonths} meses de carência.` };
-    }
-  },
-  pensao_morte: {
-    label: "Pensão por morte",
-    questions: [
-      { id: "relationship", label: "Qual seu parentesco com quem faleceu?", type: "choice", options: ["Marido/Esposa ou União Estável", "Filho(a) menor de 21 anos", "Filho(a) maior de 21 anos", "Pai ou Mãe", "Irmão(ã)"], required: true },
-      { id: "deceased_contributed", label: "Quem faleceu pagava INSS ou era aposentado?", type: "choice", options: ["sim", "nao", "nao_sei"], required: true }
-    ],
-    evaluate(answers) {
-      if (answers.deceased_contributed === "nao") return { class: "sem_direito", rationale: "Para pensão por morte, quem faleceu precisava ser segurado do INSS." };
-      const eligible = ["Marido/Esposa ou União Estável", "Filho(a) menor de 21 anos", "Pai ou Mãe"];
-      if (eligible.includes(answers.relationship)) return { class: "provavel_direito", rationale: "Você é dependente direto e há grande chance de direito à pensão." };
-      return { class: "precisa_avaliacao", rationale: "Precisamos analisar seu caso especificamente." };
-    }
-  },
-  bpc_loas: {
-    label: "BPC / LOAS",
-    questions: [
-      { id: "age", label: "Quantos anos você tem?", type: "number", unit: "anos", required: true },
-      { id: "incapacity", label: "Você tem alguma deficiência que dificulta sua vida independente?", type: "choice", options: ["sim", "nao"], required: true },
-      { id: "family_income", label: "A renda por pessoa da sua casa é menor que 1/4 do salário mínimo?", type: "choice", options: ["sim", "nao", "nao_sei"], required: true }
-    ],
-    evaluate(answers) {
-      const age = Number(answers.age);
-      const hasDeficiency = answers.incapacity === "sim";
-      const lowIncome = answers.family_income === "sim";
-      if ((age >= 65 || hasDeficiency) && lowIncome) return { class: "provavel_direito", rationale: "Você atende aos critérios de idade/deficiência e renda." };
-      if (age < 65 && !hasDeficiency) return { class: "sem_direito", rationale: "BPC exige 65 anos ou mais, ou deficiência comprovada." };
-      return { class: "precisa_avaliacao", rationale: "Precisamos analisar melhor sua situação de renda." };
-    }
-  }
-};
-
-const CLASSIFICATION_LABELS = {
-  provavel_direito: "✅ Provável Direito",
-  precisa_avaliacao: "⚠️ Precisa de Análise do Cleiton",
-  sem_direito: "❌ Sem Direito no Momento"
-};
-
-function getAllBenefits() {
-  return Object.entries(BENEFITS).map(([key, config]) => ({ key, label: config.label, questions: config.questions }));
-}
-
-function getBenefitConfig(benefitType) {
-  return BENEFITS[benefitType] || null;
-}
-
-function runTriagem(benefitType, answers) {
-  const config = BENEFITS[benefitType];
-  if (!config) return { class: "precisa_avaliacao", rationale: "Tipo de benefício não reconhecido." };
-  return config.evaluate(answers);
-}
-
 export default {
   async fetch(request, env, ctx) {
-    const url = new URL(request.url);
-    const path = url.pathname;
+    const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PrevControl — Triagem de Benefícios</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .bg-grid {
+      background-size: 24px 24px;
+      background-image: 
+        linear-gradient(to right, rgba(30, 58, 138, 0.15) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(30, 58, 138, 0.15) 1px, transparent 1px);
+    }
+  </style>
+</head>
+<body class="bg-[#0b132c] text-slate-100 min-h-screen font-sans bg-grid flex flex-col justify-between">
 
-    const corsHeaders = {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  <!-- Header -->
+  <header class="border-b border-blue-900/40 bg-[#0b132c]/95 backdrop-blur sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center font-bold text-white shadow-lg shadow-blue-600/50">P</div>
+        <span class="font-bold text-lg tracking-wide text-white">PREV<span class="text-blue-500">CONTROL</span></span>
+      </div>
+      <button onclick="togglePainel(true)" class="bg-blue-600/20 border border-blue-500/40 text-blue-400 hover:bg-blue-600 hover:text-white px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2">
+        📊 PAINEL DO ESCRITÓRIO
+      </button>
+    </div>
+  </header>
+
+  <!-- Conteúdo Principal -->
+  <main class="max-w-7xl mx-auto px-6 py-12 grid lg:grid-cols-12 gap-12 items-center flex-1">
+    
+    <!-- Lado Esquerdo -->
+    <div class="lg:col-span-6 space-y-6">
+      <span class="px-3 py-1 rounded-full bg-blue-950 border border-blue-800 text-blue-400 text-xs font-mono">
+        SISTEMA DE TRIAGEM RÁPIDA
+      </span>
+      <h1 class="text-4xl lg:text-5xl font-black text-white leading-tight">
+        Análise preliminar de direitos previdenciários.
+      </h1>
+      <p class="text-slate-400 text-base">
+        Responda a poucas perguntas para obter o diagnóstico imediato e enviar o resumo diretamente ao nosso atendimento.
+      </p>
+    </div>
+
+    <!-- Lado Direito: Formulário -->
+    <div class="lg:col-span-6">
+      <div class="bg-[#132043] border border-blue-800/50 rounded-2xl p-6 lg:p-8 shadow-2xl">
+        
+        <!-- Passo 1: Escolha -->
+        <div id="step-1" class="space-y-4">
+          <h2 class="text-xl font-bold text-white border-b border-blue-800/40 pb-3">Selecione o assunto:</h2>
+          <button onclick="iniciarQuiz('aposentadoria_idade')" class="w-full p-4 rounded-xl bg-[#0b132c] border border-blue-800/40 text-left hover:border-blue-500 hover:bg-blue-900/20 transition flex justify-between items-center group">
+            <div>
+              <div class="font-bold text-white group-hover:text-blue-400">Aposentadoria por Idade</div>
+              <div class="text-xs text-slate-400">Mulher (62+) ou Homem (65+)</div>
+            </div>
+            <span class="text-blue-500 font-bold">→</span>
+          </button>
+          <button onclick="iniciarQuiz('auxilio_doenca')" class="w-full p-4 rounded-xl bg-[#0b132c] border border-blue-800/40 text-left hover:border-blue-500 hover:bg-blue-900/20 transition flex justify-between items-center group">
+            <div>
+              <div class="font-bold text-white group-hover:text-blue-400">Auxílio-Doença</div>
+              <div class="text-xs text-slate-400">Incapacidade por motivo de saúde</div>
+            </div>
+            <span class="text-blue-500 font-bold">→</span>
+          </button>
+        </div>
+
+        <!-- Passo 2: Perguntas -->
+        <div id="step-2" class="space-y-4 hidden">
+          <div id="questions-box" class="space-y-4"></div>
+          
+          <div class="pt-4 border-t border-blue-800/40 space-y-3">
+            <label class="block text-xs font-mono text-slate-300 uppercase">Seus Dados para Contato:</label>
+            <input type="text" id="user-name" placeholder="Seu Nome Completo" class="w-full bg-[#0b132c] border border-blue-800/50 rounded-lg p-3 text-white text-sm outline-none focus:border-blue-500">
+            <input type="tel" id="user-phone" placeholder="Seu WhatsApp com DDD" class="w-full bg-[#0b132c] border border-blue-800/50 rounded-lg p-3 text-white text-sm outline-none focus:border-blue-500">
+          </div>
+
+          <div class="flex gap-3 pt-2">
+            <button onclick="resetar()" class="w-1/3 bg-[#0b132c] border border-blue-800/40 text-slate-300 font-semibold py-3 rounded-lg hover:bg-blue-900/30 text-sm">Voltar</button>
+            <button onclick="gerarResultado()" class="w-2/3 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg shadow-lg text-sm">Ver Resultado</button>
+          </div>
+        </div>
+
+        <!-- Passo 3: Resultado -->
+        <div id="step-3" class="space-y-4 hidden">
+          <div id="result-box" class="p-4 rounded-xl border"></div>
+          <a id="btn-wa" href="#" target="_blank" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 rounded-lg flex items-center justify-center gap-2 shadow-lg text-sm">
+            Enviar para Atendimento no WhatsApp →
+          </a>
+          <button onclick="resetar()" class="w-full text-center text-xs text-slate-400 hover:text-white pt-1">Nova Simulação</button>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- PAINEL DE CONTROLE DO ESCRITÓRIO -->
+  <div id="modal-painel" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-[#132043] border border-blue-800 rounded-2xl max-w-4xl w-full p-6 space-y-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+      
+      <div class="flex justify-between items-center border-b border-blue-800/40 pb-4">
+        <div>
+          <span class="text-blue-400 text-xs font-mono">// GESTÃO DE ATENDIMENTOS</span>
+          <h3 class="text-lg font-bold text-white">Painel de Controle de Leads</h3>
+        </div>
+        <button onclick="togglePainel(false)" class="text-slate-400 hover:text-white font-bold text-xl">✕</button>
+      </div>
+
+      <!-- Configuração de WhatsApp -->
+      <div class="bg-[#0b132c] p-4 rounded-xl border border-blue-800/40 space-y-3">
+        <label class="block text-xs font-mono text-slate-300 uppercase">Número do WhatsApp do Escritório (com DDD):</label>
+        <div class="flex gap-2">
+          <input type="text" id="cfg-phone" placeholder="5517999999999" class="w-full bg-[#132043] border border-blue-800/50 rounded-lg p-2.5 text-white text-sm outline-none">
+          <button onclick="salvarConfig()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap">Salvar Número</button>
+        </div>
+      </div>
+
+      <!-- Tabela de Leads -->
+      <div class="space-y-3">
+        <h4 class="text-sm font-bold text-white uppercase font-mono">Últimas Triagens Realizadas:</h4>
+        <div class="overflow-x-auto border border-blue-800/40 rounded-xl">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-[#0b132c] text-blue-400 font-mono uppercase">
+              <tr>
+                <th class="p-3">Data</th>
+                <th class="p-3">Nome</th>
+                <th class="p-3">Telefone</th>
+                <th class="p-3">Assunto</th>
+                <th class="p-3">Status</th>
+                <th class="p-3">Ação</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-leads" class="divide-y divide-blue-800/30 bg-[#132043]">
+              <!-- Preenchido via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer class="border-t border-blue-900/40 py-4 text-center text-xs text-slate-500 font-mono">
+    PrevControl © 2026 — Sistema de Triagem Direta
+  </footer>
+
+  <script>
+    const BENEFIT_CONFIGS = {
+      aposentadoria_idade: {
+        label: "Aposentadoria por Idade",
+        questions: [
+          { id: "sexo", label: "Sexo Biológico", type: "choice", options: ["mulher", "homem"] },
+          { id: "idade", label: "Sua idade atual", type: "number", min: 18, max: 100 },
+          { id: "tempo_anos", label: "Tempo de contribuição (Anos)", type: "number", min: 0, max: 70 },
+          { id: "tempo_meses", label: "Tempo de contribuição (Meses)", type: "number", min: 0, max: 11 }
+        ]
+      },
+      auxilio_doenca: {
+        label: "Auxílio-Doença / Incapacidade",
+        questions: [
+          { id: "laudo", label: "Possui laudo médico recente?", type: "choice", options: ["sim", "nao"] },
+          { id: "afastado", label: "Está afastado há mais de 15 dias?", type: "choice", options: ["sim", "nao"] }
+        ]
+      }
     };
 
-    if (request.method === "OPTIONS") {
-      return new Response(null, { headers: corsHeaders });
+    const CLASSIFICATION_LABELS = {
+      provavel_direito: "✅ Provável Direito Encontrado",
+      precisa_avaliacao: "⚠️ Necessita Avaliação Detalhada",
+      sem_direito: "❌ Requisitos Mínimos Não Atingidos"
+    };
+
+    function runTriagem(benefitKey, answers) {
+      if (benefitKey === 'aposentadoria_idade') {
+        const idade = parseInt(answers.idade || 0);
+        const anos = parseInt(answers.tempo_anos || 0);
+        const meses = parseInt(answers.tempo_meses || 0);
+        const tempoTotalAnos = anos + (meses / 12);
+        const sexo = answers.sexo;
+
+        const idadeMinima = sexo === 'mulher' ? 62 : 65;
+        const tempoMinimo = 15;
+
+        if (idade >= idadeMinima && tempoTotalAnos >= tempoMinimo) {
+          return { class: 'provavel_direito', rationale: \`Você atinge a idade mínima (\${idadeMinima} anos) e possui \${anos} anos e \${meses} meses de contribuição.\` };
+        } else {
+          return { class: 'sem_direito', rationale: \`Necessário \${idadeMinima} anos de idade e 15 anos de contribuição. Informado: \${anos} anos e \${meses} meses.\` };
+        }
+      }
+
+      if (benefitKey === 'auxilio_doenca') {
+        if (answers.laudo === 'sim' && answers.afastado === 'sim') {
+          return { class: 'provavel_direito', rationale: 'Com laudo e incapacidade continuada, o pedido de auxílio temporário é recomendado.' };
+        }
+        return { class: 'precisa_avaliacao', rationale: 'Recomendamos análise completa dos laudos pela equipe jurídica.' };
+      }
+
+      return { class: 'precisa_avaliacao', rationale: 'Dados iniciais coletados para análise do advogado.' };
     }
 
-    if (path === "/" || !path.startsWith("/api/")) {
-      if (env.ASSETS) return env.ASSETS.fetch(request);
+    let benefitAtual = null;
+    let respostas = {};
+    let configWhatsApp = localStorage.getItem('cfg_wa') || '5517999999999';
+
+    document.getElementById('cfg-phone').value = configWhatsApp;
+
+    function iniciarQuiz(key) {
+      benefitAtual = key;
+      respostas = {};
+      const config = BENEFIT_CONFIGS[key];
+      const box = document.getElementById('questions-box');
+      box.innerHTML = '';
+
+      config.questions.forEach(q => {
+        const div = document.createElement('div');
+        div.className = 'space-y-1';
+        
+        const label = document.createElement('label');
+        label.className = 'block text-xs font-mono text-slate-300 uppercase';
+        label.textContent = q.label;
+        div.appendChild(label);
+
+        if (q.type === 'choice') {
+          const grid = document.createElement('div');
+          grid.className = 'grid grid-cols-2 gap-2';
+          q.options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'p-3 rounded-lg bg-[#0b132c] border border-blue-800/40 text-xs font-bold uppercase hover:bg-blue-600 hover:text-white transition';
+            btn.textContent = opt;
+            btn.onclick = () => {
+              grid.querySelectorAll('button').forEach(b => b.className = 'p-3 rounded-lg bg-[#0b132c] border border-blue-800/40 text-xs font-bold uppercase hover:bg-blue-600 hover:text-white transition');
+              btn.className = 'p-3 rounded-lg bg-blue-600 border border-blue-500 text-xs font-bold uppercase text-white transition';
+              respostas[q.id] = opt;
+            };
+            grid.appendChild(btn);
+          });
+          div.appendChild(grid);
+        } else {
+          const input = document.createElement('input');
+          input.type = 'number';
+          input.min = q.min || 0;
+          input.max = q.max || 100;
+          input.placeholder = \`Ex: \${q.min || 0}\`;
+          input.className = 'w-full bg-[#0b132c] border border-blue-800/50 rounded-lg p-3 text-white text-sm outline-none focus:border-blue-500';
+          input.oninput = (e) => respostas[q.id] = e.target.value;
+          div.appendChild(input);
+        }
+
+        box.appendChild(div);
+      });
+
+      document.getElementById('step-1').classList.add('hidden');
+      document.getElementById('step-2').classList.remove('hidden');
     }
 
-    if (path === "/api/benefits" && request.method === "GET") {
-      return json({ benefits: getAllBenefits() }, corsHeaders);
+    function gerarResultado() {
+      const nome = document.getElementById('user-name').value;
+      const fone = document.getElementById('user-phone').value;
+
+      if (!nome || !fone) {
+        alert('Por favor, preencha seu nome e telefone WhatsApp.');
+        return;
+      }
+
+      const res = runTriagem(benefitAtual, respostas);
+      const resultBox = document.getElementById('result-box');
+      const btnWa = document.getElementById('btn-wa');
+
+      const cores = {
+        provavel_direito: 'bg-emerald-950/50 border-emerald-500/40 text-emerald-300',
+        precisa_avaliacao: 'bg-amber-950/50 border-amber-500/40 text-amber-300',
+        sem_direito: 'bg-rose-950/50 border-rose-500/40 text-rose-300'
+      };
+
+      resultBox.className = \`p-4 rounded-xl border \${cores[res.class]}\`;
+      resultBox.innerHTML = \`
+        <div class="font-bold text-sm mb-1">\${CLASSIFICATION_LABELS[res.class]}</div>
+        <div class="text-xs opacity-90">\${res.rationale}</div>
+      \`;
+
+      const lead = {
+        id: Date.now(),
+        data: new Date().toLocaleDateString('pt-BR'),
+        nome: nome,
+        fone: fone,
+        assunto: BENEFIT_CONFIGS[benefitAtual].label,
+        resultado: CLASSIFICATION_LABELS[res.class],
+        status: 'Pendente'
+      };
+
+      const leadsAtuais = JSON.parse(localStorage.getItem('prev_leads') || '[]');
+      leadsAtuais.unshift(lead);
+      localStorage.setItem('prev_leads', JSON.stringify(leadsAtuais));
+      atualizarTabelaLeads();
+
+      const msg = encodeURIComponent(\`Olá! Meu nome é \${nome}.\nAssunto: \${BENEFIT_CONFIGS[benefitAtual].label}\nResultado da Triagem: \${CLASSIFICATION_LABELS[res.class]}\nResumo: \${res.rationale}\`);
+      btnWa.href = \`https://wa.me/\${configWhatsApp}?text=\${msg}\`;
+
+      document.getElementById('step-2').classList.add('hidden');
+      document.getElementById('step-3').classList.remove('hidden');
     }
 
-    if (path === "/api/triagem" && request.method === "POST") {
-      return handleTriagem(request, env, corsHeaders);
+    function resetar() {
+      document.getElementById('step-2').classList.add('hidden');
+      document.getElementById('step-3').classList.add('hidden');
+      document.getElementById('step-1').classList.remove('hidden');
     }
 
-    if (path === "/api/admin/leads" && request.method === "GET") {
-      return handleAdminAuth(request, env, async () => {
-        const result = await env.DB.prepare("SELECT * FROM leads ORDER BY created_at DESC LIMIT 200").all();
-        return json({ leads: result.results }, corsHeaders);
-      }, corsHeaders);
+    function togglePainel(abrir) {
+      document.getElementById('modal-painel').classList.toggle('hidden', !abrir);
+      if (abrir) atualizarTabelaLeads();
     }
 
-    if (path === "/api/admin/leads" && request.method === "POST") {
-      return handleAdminAuth(request, env, async () => {
-        const body = await request.json();
-        const { status, notes, id } = body;
-        if (!id) return json({ error: "id obrigatório" }, corsHeaders, 400);
-        await env.DB.prepare(`UPDATE leads SET status = ?, notes = ? WHERE id = ?`).bind(status || 'novo', notes || '', id).run();
-        return json({ ok: true }, corsHeaders);
-      }, corsHeaders);
+    function salvarConfig() {
+      const num = document.getElementById('cfg-phone').value;
+      configWhatsApp = num;
+      localStorage.setItem('cfg_wa', num);
+      alert('Número salvo!');
     }
 
-    return new Response("Página não encontrada", { status: 404 });
-  },
+    function atualizarTabelaLeads() {
+      const leads = JSON.parse(localStorage.getItem('prev_leads') || '[]');
+      const tbody = document.getElementById('tabla-leads');
+      tbody.innerHTML = '';
+
+      if (leads.length === 0) {
+        tbody.innerHTML = \`<tr><td colspan="6" class="p-4 text-center text-slate-500">Nenhuma triagem realizada ainda.</td></tr>\`;
+        return;
+      }
+
+      leads.forEach(l => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = \`
+          <td class="p-3">\${l.data}</td>
+          <td class="p-3 font-bold text-white">\${l.nome}</td>
+          <td class="p-3">\${l.fone}</td>
+          <td class="p-3">\${l.assunto}</td>
+          <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] \${l.status === 'Atendido' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-amber-950 text-amber-400 border border-amber-800'}">\${l.status}</span></td>
+          <td class="p-3">
+            <button onclick="marcarAtendido(\${l.id})" class="text-blue-400 hover:underline">Alternar Status</button>
+          </td>
+        \`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function marcarAtendido(id) {
+      let leads = JSON.parse(localStorage.getItem('prev_leads') || '[]');
+      leads = leads.map(l => {
+        if (l.id === id) l.status = l.status === 'Pendente' ? 'Atendido' : 'Pendente';
+        return l;
+      });
+      localStorage.setItem('prev_leads', JSON.stringify(leads));
+      atualizarTabelaLeads();
+    }
+  </script>
+</body>
+</html>`;
+
+    return new Response(html, {
+      headers: { "content-type": "text/html; charset=utf-8" }
+    });
+  }
 };
-
-async function handleTriagem(request, env, corsHeaders) {
-  try {
-    const body = await request.json();
-    const { name, phone, email, benefit_type, answers } = body;
-
-    if (!name || !phone || !benefit_type || !answers) {
-      return json({ error: "Dados incompletos" }, corsHeaders, 400);
-    }
-
-    const config = getBenefitConfig(benefit_type);
-    if (!config) return json({ error: "Benefício inválido" }, corsHeaders, 400);
-
-    const result = runTriagem(benefit_type, answers);
-
-    await env.DB.prepare(
-      `INSERT INTO leads (name, phone, email, benefit_type, answers_json, classification, rationale, status) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'novo')`
-    ).bind(name, phone, email || null, benefit_type, JSON.stringify(answers), result.class, result.rationale).run();
-
-    const waMsg = encodeURIComponent(
-      `Olá Cleiton! Sou *${name}*.\nTriagem: *${config.label}*.\nResultado: ${CLASSIFICATION_LABELS[result.class]}.\nResumo: ${result.rationale}`
-    );
-    const waLink = `https://wa.me/${env.WHATSAPP_NUMBER}?text=${waMsg}`;
-
-    return json({
-      classification: result.class,
-      classification_label: CLASSIFICATION_LABELS[result.class],
-      rationale: result.rationale,
-      whatsapp_link: waLink,
-    }, corsHeaders);
-
-  } catch (e) {
-    return json({ error: "Erro: " + e.message }, corsHeaders, 500);
-  }
-}
-
-async function handleAdminAuth(request, env, handler, corsHeaders) {
-  const auth = request.headers.get("Authorization") || "";
-  const token = auth.replace("Bearer ", "");
-  if (token !== env.ADMIN_TOKEN) {
-    return json({ error: "Não autorizado" }, corsHeaders, 401);
-  }
-  return handler();
-}
-
-function json(data, corsHeaders, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { "Content-Type": "application/json", ...corsHeaders },
-  });
-}
