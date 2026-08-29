@@ -1,54 +1,38 @@
-<!-- Demos do Formulário no Tema Dark Urbano -->
-<div class="bg-zinc-950 text-white p-6 rounded-2xl max-w-xl mx-auto border border-zinc-800 font-sans shadow-2xl">
-  <!-- Topo -->
-  <div class="mb-6">
-    <span class="bg-orange-500/10 text-orange-400 text-xs font-bold px-3 py-1 rounded-full border border-orange-500/20">
-      TRIAGEM RÁPIDA
-    </span>
-    <h2 class="text-2xl font-black mt-3 text-zinc-100 tracking-tight">VAMOS VER SEUS DIREITOS, MANA?</h2>
-    <p class="text-zinc-400 text-sm mt-1">Responda às perguntas abaixo clicando nos botões. Sem enrolação.</p>
-  </div>
+<!-- Demos do Formulário no Tema Tech Blueprint -->
+<div class="bg-[#0b132c] text-slate-100 p-8 rounded-xl max-w-xl mx-auto border border-blue-900/50 shadow-2xl relative overflow-hidden">
+  <!-- Detalhe do Grid Blueprint no Fundo -->
+  <div class="absolute inset-0 bg-[linear-gradient(to_right,#1e293b15_1px,transparent_1px),linear-gradient(to_bottom,#1e293b15_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none"></div>
 
-  <!-- Etapa de Seleção de Benefício -->
-  <div id="step-1" class="space-y-4">
-    <label class="block text-xs font-bold text-zinc-400 uppercase tracking-wider">Qual é a sua dúvida hoje?</label>
-    
-    <div class="grid grid-cols-1 gap-3">
-      <button onclick="selectOption('benefit', 'aposentadoria_idade')" class="w-full text-left p-4 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-orange-500 hover:bg-zinc-850 transition flex justify-between items-center group">
-        <div>
-          <div class="font-bold text-white group-hover:text-orange-400">Aposentadoria por Idade</div>
-          <div class="text-xs text-zinc-400">Mulher (62+) ou Homem (65+)</div>
-        </div>
-        <span class="text-orange-500 font-bold">→</span>
-      </button>
-
-      <button onclick="selectOption('benefit', 'auxilio_doenca')" class="w-full text-left p-4 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-orange-500 hover:bg-zinc-850 transition flex justify-between items-center group">
-        <div>
-          <div class="font-bold text-white group-hover:text-orange-400">Auxílio-Doença</div>
-          <div class="text-xs text-zinc-400">Incapacidade por motivo de saúde</div>
-        </div>
-        <span class="text-orange-500 font-bold">→</span>
-      </button>
-
-      <button onclick="selectOption('benefit', 'trabalhista')" class="w-full text-left p-4 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-orange-500 hover:bg-zinc-850 transition flex justify-between items-center group">
-        <div>
-          <div class="font-bold text-white group-hover:text-orange-400">Direitos Trabalhistas</div>
-          <div class="text-xs text-zinc-400">Demissão, verbas rescisórias ou FGTS</div>
-        </div>
-        <span class="text-orange-500 font-bold">→</span>
-      </button>
+  <div class="relative z-10">
+    <div class="border-b border-blue-900/40 pb-4 mb-6">
+      <span class="text-blue-400 text-xs font-mono tracking-widest uppercase">// SIMULAÇÃO PREVIDENCIÁRIA</span>
+      <h2 class="text-2xl font-bold mt-1 text-white">Análise Preliminar de Benefício</h2>
     </div>
-  </div>
 
-  <!-- Etapa de Múltipla Escolha (Dinamizada pelo JS) -->
-  <div id="step-2" class="space-y-4 mt-6 hidden">
-    <label class="block text-xs font-bold text-zinc-400 uppercase tracking-wider">Você tem laudo médico recente?</label>
-    <div class="grid grid-cols-2 gap-3">
-      <button class="p-4 rounded-xl bg-zinc-900 border border-zinc-800 font-bold hover:bg-orange-500 hover:text-black transition">
-        Sim, tenho
-      </button>
-      <button class="p-4 rounded-xl bg-zinc-900 border border-zinc-800 font-bold hover:bg-orange-500 hover:text-black transition">
-        Não tenho
+    <!-- Pergunta Múltipla Escolha -->
+    <div class="space-y-4">
+      <p class="text-sm font-medium text-slate-300">Selecione o seu sexo biológico para aplicar as regras de transição da EC 103/2019:</p>
+      
+      <div class="grid grid-cols-2 gap-4">
+        <button class="flex flex-col items-center justify-center p-5 rounded-lg bg-[#132043] border border-blue-800/40 hover:border-blue-500 hover:bg-blue-600/20 transition group">
+          <span class="text-lg font-bold text-white group-hover:text-blue-400">Mulher</span>
+          <span class="text-xs text-slate-400 mt-1">Regra: 62 anos</span>
+        </button>
+
+        <button class="flex flex-col items-center justify-center p-5 rounded-lg bg-[#132043] border border-blue-800/40 hover:border-blue-500 hover:bg-blue-600/20 transition group">
+          <span class="text-lg font-bold text-white group-hover:text-blue-400">Homem</span>
+          <span class="text-xs text-slate-400 mt-1">Regra: 65 anos</span>
+        </button>
+      </div>
+
+      <!-- Campo Numérico Limpo -->
+      <div class="mt-4">
+        <label class="block text-xs font-mono text-slate-400 mb-2">TEMPO DE CONTRIBUIÇÃO (ANOS):</label>
+        <input type="number" placeholder="Ex: 15" class="w-full bg-[#132043] border border-blue-800/40 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500 font-mono">
+      </div>
+
+      <button class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-lg transition shadow-lg shadow-blue-600/30 mt-4">
+        Calcular Diagnóstico →
       </button>
     </div>
   </div>
