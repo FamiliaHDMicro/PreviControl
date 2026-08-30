@@ -1,4 +1,8 @@
-Perfeito! Vamos lá. Aqui está o index.js completo, pronto pra você colar no seu repositório:
+Calma, sem pedir desculpa! Erro é parte do processo. Vamos corrigir agora. ️
+
+O problema é simples: o index.js que está no seu repositório ainda é o antigo (com Jarvis, upload R2, etc). Por isso a build falha e o login não funciona.
+
+Aqui está o index.js corrigido e completo — é só colar no lugar do atual no GitHub:
 
 // index.js — PrevControl Worker (Terminal Burro / Single File)
 // Custo zero · Sem IA · Sem juridiquês · Respeito com 50+
@@ -19,7 +23,7 @@ export default {
 
     const corsHeaders = {
       "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type, Authorization",
     };
     if (request.method === "OPTIONS") {
@@ -165,7 +169,7 @@ function montarResumo({ nome, telefone, benefitLabel, routerValue, answers, obse
   if (observacao) linhas.push(, Observação da pessoa: ${observacao});
   linhas.push(
     ,
-     Resultado da triagem automática: ${classificationLabel},
+    📋 Resultado da triagem automática: ${classificationLabel},
     📝 ${resultado.rationale},
     ,
     Este é um resultado inicial e automático — não substitui análise jurídica completa.
@@ -543,7 +547,7 @@ async function finalizar() {
     render();
   } catch (e) {
     area.innerHTML = \
-      
+      😔
       Não conseguimos enviar sua análise.
       Tentar novamente
     \;
@@ -618,51 +622,32 @@ render();
 ;
 }
 
-🚀 Passo a passo no Cloudflare
+📋 O que fazer agora (3 passos)
 
-Substitua os arquivos no GitHub
-Cole o index.js acima no lugar do atual
-Confirme que o rules.js está com a versão nova (com ROUTERQUESTION, resolveBenefitKey, CAMPOLIVRE_OPCIONAL)
-Confirme que o wrangler.jsonc aponta para index.js no campo main
-Faça o commit e push
+Substituir o index.js no GitHub
+Abra: https://github.com/FamiliaHDMicro/PreviControl/edit/main/index.js
+Apague tudo que está lá
+Cole o código acima
+Clique em "Commit changes"
 
-Adicione os 4 Secrets no Cloudflare
-Vá em: Cloudflare Dashboard → Workers & Pages → Seu Worker → Settings → Variables and Secrets → Add
-
-Adicione um por um, sempre marcando "Secret" (não "Variable"):
+Verificar os 4 secrets no Cloudflare
+Vá em Workers & Pages → prevconsulta → Settings → Variables and Secrets e confirme:
 
 | Nome | Tipo | Valor |
 |---|---|---|
-| ADMIN_TOKEN | Secret | cleiton2026!adm |
-| USER1TOKEN | Secret | atend12026! |
-| USER2TOKEN | Secret | atend22026! |
+| ADMIN_TOKEN | Secret | cleiton7449 |
+| USER1_TOKEN | Secret | user123a |
+| USER2_TOKEN | Secret | user123b |
 | WHATSAPP_NUMBER | Secret | 5517991087449 |
 
-⚠️ Importante: use o botão "Secret" para que fiquem criptografados. Se usar "Variable", ficam visíveis.
+Aguardar o deploy automático
+O Cloudflare vai detectar o push no GitHub e fazer o deploy sozinho (2-3 minutos).
 
-Deploy
-No terminal do seu projeto:
-npm run deploy
-Ou pelo dashboard do Cloudflare: Workers & Pages → Seu Worker → Deployments → Deploy
+✅ Depois do deploy, teste:
 
-Teste
-Abra o domínio do seu Worker no navegador
-Preencha o formulário completo (nome → situação → perguntas → observação)
-Verifique se o lead aparece no painel admin (clique em "Área Restrita" no topo)
-Teste o login com admin / cleiton2026!adm
+Abra prevcontrol.hdmicro-cliente.workers.dev
+Clique em "Área Restrita →"
+Tente: admin / cleiton7449`
+Deve abrir o painel com os leads
 
-Se der erro
-Me manda o erro exato que aparece no console do navegador (F12) ou no log do Worker (Cloudflare → Workers → Seu Worker → Logs) que eu te ajudo a resolver.
-
-✅ Checklist final
-
-[ ] rules.js atualizado no GitHub
-[ ] index.js substituído pelo novo
-[ ] wrangler.jsonc aponta para index.js`
-[ ] 4 secrets criados no Cloudflare
-[ ] Deploy feito com sucesso
-[ ] Formulário testado no navegador
-[ ] Login admin funcionando
-[ ] Lead salvo no D1 e aparecendo no painel
-
-Me avisa quando chegar no passo 2 (adicionar os secrets) que eu te acompanho. Se travar em qualquer lugar, é só me mandar o erro. 🚀
+Se der erro, me manda a mensagem exata que eu resolvo na hora. 🚀
