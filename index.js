@@ -1,9 +1,3 @@
-Calma, sem pedir desculpa! Erro é parte do processo. Vamos corrigir agora. ️
-
-O problema é simples: o index.js que está no seu repositório ainda é o antigo (com Jarvis, upload R2, etc). Por isso a build falha e o login não funciona.
-
-Aqui está o index.js corrigido e completo — é só colar no lugar do atual no GitHub:
-
 // index.js — PrevControl Worker (Terminal Burro / Single File)
 // Custo zero · Sem IA · Sem juridiquês · Respeito com 50+
 import {
@@ -12,7 +6,7 @@ import {
   runTriagem,
   CLASSIFICATION_LABELS,
   ROUTER_QUESTION,
-  CAMPOLIVREOPCIONAL,
+  CAMPO_LIVRE_OPCIONAL,
   resolveBenefitKey
 } from "./rules.js";
 
@@ -30,17 +24,14 @@ export default {
       return new Response(null, { headers: corsHeaders });
     }
 
-    // ---- API: Login admin ----
     if (path === "/api/admin/login" && request.method === "POST") {
       return handleLogin(request, env, corsHeaders);
     }
 
-    // ---- API: Salvar lead ----
     if (path === "/api/leads" && request.method === "POST") {
       return handleLeads(request, env, corsHeaders);
     }
 
-    // ---- API: Listar leads (admin) ----
     if (path === "/api/admin/leads" && request.method === "GET") {
       return handleAdminAuth(request, env, async () => {
         const filter = url.searchParams.get("classification");
@@ -57,7 +48,6 @@ export default {
       }, corsHeaders);
     }
 
-    // ---- API: Atualizar lead (admin) ----
     if (path === "/api/admin/leads" && request.method === "POST") {
       return handleAdminAuth(request, env, async () => {
         const body = await request.json();
@@ -75,23 +65,18 @@ export default {
 
         params.push(id);
         await env.DB.prepare(
-          UPDATE leads SET ${updates.join(", ")} WHERE id = ?
+          `UPDATE leads SET ${updates.join(", ")} WHERE id = ?`
         ).bind(...params).run();
         return json({ ok: true }, corsHeaders);
       }, corsHeaders);
     }
 
-    // ---- Fallback: servir landing page ----
     const html = renderHTML(env.WHATSAPP_NUMBER || "5517991087449");
     return new Response(html, {
       headers: { "Content-Type": "text/html;charset=UTF-8", ...corsHeaders }
     });
   },
 };
-
-// ============================================================
-//  HANDLERS
-// ============================================================
 
 async function handleLogin(request, env, corsHeaders) {
   try {
@@ -138,8 +123,8 @@ async function handleLeads(request, env, corsHeaders) {
 
     if (env.DB) {
       await env.DB.prepare(
-        INSERT INTO leads (name, phone, email, benefittype, answersjson, classification, rationale, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 'novo')
+        `INSERT INTO leads (name, phone, email, benefit_type, answers_json, classification, rationale, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'novo')`
       ).bind(
         nome, telefone, null, benefitKey,
         JSON.stringify(answers || {}), resultado.class, resultado.rationale
@@ -161,18 +146,18 @@ async function handleLeads(request, env, corsHeaders) {
 
 function montarResumo({ nome, telefone, benefitLabel, routerValue, answers, observacao, resultado, classificationLabel }) {
   const linhas = [
-    Olá! Sou ${nome} (${telefone}).,
-    Situação: ${benefitLabel}${routerValue === "bpcloasrenovacao" ? " — Renovação/Revisão periódica" : ""},
-    `,
-    ...Object.entries(answers || {}).map(([k, v]) => - ${k}: ${v}),
+    `Olá! Sou ${nome} (${telefone}).`,
+    `Situação: ${benefitLabel}${routerValue === "bpc_loas_renovacao" ? " — Renovação/Revisão periódica" : ""}`,
+    ``,
+    ...Object.entries(answers || {}).map(([k, v]) => `- ${k}: ${v}`),
   ];
-  if (observacao) linhas.push(, Observação da pessoa: ${observacao});
+  if (observacao) linhas.push(``, `Observação da pessoa: ${observacao}`);
   linhas.push(
-    ,
-    📋 Resultado da triagem automática: ${classificationLabel},
-    📝 ${resultado.rationale},
-    ,
-    Este é um resultado inicial e automático — não substitui análise jurídica completa.
+    ``,
+    `📋 Resultado da triagem automática: ${classificationLabel}`,
+    `📝 ${resultado.rationale}`,
+    ``,
+    `Este é um resultado inicial e automático — não substitui análise jurídica completa.`
   );
   return linhas.join("\n");
 }
@@ -181,7 +166,7 @@ async function handleAdminAuth(request, env, handler, corsHeaders) {
   const auth = request.headers.get("Authorization") || "";
   const token = auth.replace("Bearer ", "");
 
-  const validTokens = [env.ADMINTOKEN, env.USER1TOKEN, env.USER2_TOKEN];
+  const validTokens = [env.ADMIN_TOKEN, env.USER1_TOKEN, env.USER2_TOKEN];
   if (!validTokens.includes(token)) {
     return json({ error: "Não autorizado" }, corsHeaders, 401);
   }
@@ -196,19 +181,19 @@ function json(data, corsHeaders, status = 200) {
   });
 }
 
-// ============================================================
-//  HTML DA LANDING PAGE
-// ============================================================
-
 function renderHTML(WHATSAPP_NUMBER) {
   const routerData = JSON.stringify(ROUTER_QUESTION);
   const benefitsData = JSON.stringify(getAllBenefits());
-  const campoLivreData = JSON.stringify(CAMPOLIVREOPCIONAL);
+  const campoLivreData = JSON.stringify(CAMPO_LIVRE_OPCIONAL);
 
-  return 
-
-PrevConsulta — Triagem Previdenciária
-
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PrevConsulta — Triagem Previdenciária</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
   * { font-family: 'Inter', system-ui, sans-serif; }
   body { background: #0a1628; color: #e2e8f0; min-height: 100vh; }
   .grid-bg {
@@ -240,87 +225,99 @@ PrevConsulta — Triagem Previdenciária
   .huge-text { font-size: clamp(2rem, 6vw, 3.5rem); line-height: 1.05; letter-spacing: -0.02em; }
   .input-big { font-size: 1.05rem; padding: 0.9rem 1rem; }
   .btn-big { font-size: 1.05rem; padding: 1rem 1.5rem; }
+</style>
+</head>
+<body class="grid-bg glow">
 
-  
-    
-      P
-      PrevConsulta
-    
-    Área Restrita →
-  
-  
-    
-      
-        
+<header class="max-w-6xl mx-auto px-4 sm:px-6 pt-8 pb-6">
+  <div class="flex items-center justify-between mb-8">
+    <div class="flex items-center gap-2">
+      <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center font-bold text-white">P</div>
+      <span class="font-bold text-white text-lg">PrevConsulta</span>
+    </div>
+    <button onclick="abrirLoginModal()" class="text-sm text-slate-400 hover:text-blue-400">Área Restrita →</button>
+  </div>
+  <div class="grid md:grid-cols-12 gap-8 items-end">
+    <div class="md:col-span-7">
+      <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-300 text-xs font-semibold mb-6">
+        <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
         TRIAGEM PREVIDENCIÁRIA · GRATUITA
-      
-      
-        Descubra se você temdireito ao seu benefício
-      
-      
+      </div>
+      <h1 class="huge-text font-bold text-white mb-4">
+        Descubra se você tem<br><span class="text-blue-400">direito ao seu benefício</span>
+      </h1>
+      <p class="big-text text-slate-300 max-w-xl">
         Responda algumas perguntas simples. É rápido, sem complicação e sem juridiquês.
-      
-    
-    
-      
-        Como funciona
-        
-          
-            1
-            Conte sua situação
-          
-          
-            2
-            Receba uma análise inicial
-          
-          
-            3
-            Envie pelo WhatsApp
-          
-        
-      
-    
-  
+      </p>
+    </div>
+    <div class="md:col-span-5 hidden md:block">
+      <div class="card rounded-2xl p-5 space-y-3">
+        <div class="text-xs font-mono text-blue-400 uppercase tracking-wider">Como funciona</div>
+        <div class="space-y-2.5">
+          <div class="flex gap-3 items-start">
+            <div class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-300 flex items-center justify-center text-xs font-bold shrink-0">1</div>
+            <div class="text-sm text-slate-300">Conte sua situação</div>
+          </div>
+          <div class="flex gap-3 items-start">
+            <div class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-300 flex items-center justify-center text-xs font-bold shrink-0">2</div>
+            <div class="text-sm text-slate-300">Receba uma análise inicial</div>
+          </div>
+          <div class="flex gap-3 items-start">
+            <div class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-300 flex items-center justify-center text-xs font-bold shrink-0">3</div>
+            <div class="text-sm text-slate-300">Envie pelo WhatsApp</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
 
-  
-    
-    
-  
-  
+<main class="max-w-3xl mx-auto px-4 sm:px-6 pb-16">
+  <div class="card rounded-2xl p-5 sm:p-8">
+    <div id="stepper" class="flex items-center mb-6"></div>
+    <div id="form-area" class="fade-in"></div>
+  </div>
+  <div class="mt-6 text-center text-xs text-slate-500 px-4">
     💡 Esta é uma análise inicial e automática. Não substitui uma consulta com advogado.
-  
+  </div>
+</main>
 
-  
-    
-      Acesso ao Painel
-      ✕
-    
-    
-      Usuário
-      
-    
-    
-      Senha
-      
-    
-    
-      Entrar
-      Cancelar
-    
-  
+<div id="modal-login" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-3">
+  <div class="card rounded-2xl w-full max-w-[320px] p-5 space-y-3">
+    <div class="flex justify-between items-center border-b border-blue-900/40 pb-3">
+      <h3 class="text-base font-bold text-white">Acesso ao Painel</h3>
+      <button onclick="fecharLoginModal()" class="text-slate-400 hover:text-white text-xl">✕</button>
+    </div>
+    <div>
+      <label class="block text-xs font-mono text-slate-300 mb-1">Usuário</label>
+      <input type="text" id="user-login" class="w-full bg-[#0a1628] border border-blue-800/50 rounded-lg p-2.5 text-white text-sm">
+    </div>
+    <div>
+      <label class="block text-xs font-mono text-slate-300 mb-1">Senha</label>
+      <input type="password" id="pass-login" class="w-full bg-[#0a1628] border border-blue-800/50 rounded-lg p-2.5 text-white text-sm">
+    </div>
+    <div class="flex gap-2">
+      <button onclick="autenticarUsuario()" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-lg font-bold text-sm">Entrar</button>
+      <button onclick="fecharLoginModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-2.5 rounded-lg font-bold text-sm">Cancelar</button>
+    </div>
+  </div>
+</div>
 
-  
-    
-      
-        // GESTÃO DE ATENDIMENTOS
-        Painel 
-      
-      ✕
-    
-    Carregando leads...
-  
+<div id="modal-painel" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-3">
+  <div class="card rounded-2xl w-full max-w-2xl p-5 space-y-4 max-h-[85vh] overflow-y-auto">
+    <div class="flex justify-between items-center border-b border-blue-900/40 pb-3">
+      <div>
+        <span class="text-blue-400 text-xs font-mono">// GESTÃO DE ATENDIMENTOS</span>
+        <h3 class="text-lg font-bold text-white">Painel <span id="user-badge" class="text-xs font-normal text-slate-400"></span></h3>
+      </div>
+      <button onclick="fecharPainel()" class="text-slate-400 hover:text-white font-bold text-xl">✕</button>
+    </div>
+    <div id="leads-lista" class="space-y-2 text-sm text-slate-300">Carregando leads...</div>
+  </div>
+</div>
 
-const DEFAULTPHONE = "${WHATSAPPNUMBER}";
+<script>
+const DEFAULT_PHONE = "${WHATSAPP_NUMBER}";
 const ROUTER = ${routerData};
 const BENEFITS = ${benefitsData};
 const CAMPO_LIVRE = ${campoLivreData};
@@ -333,7 +330,13 @@ const estado = {
 
 function mascaraTelefone(valor) {
   const d = valor.replace(/\\D/g, '').slice(0, 11);
-  if (d.length  {
+  if (d.length <= 2) return d.length ? \`(\${d}\` : '';
+  if (d.length <= 7) return \`(\${d.slice(0,2)}) \${d.slice(2)}\`;
+  return \`(\${d.slice(0,2)}) \${d.slice(2,7)}-\${d.slice(7,11)}\`;
+}
+
+function aplicarMascara(input) {
+  input.addEventListener('input', (e) => {
     const pos = e.target.selectionStart;
     const antes = e.target.value.length;
     e.target.value = mascaraTelefone(e.target.value);
@@ -349,14 +352,17 @@ function renderStepper() {
   const atual = stepMap[estado.step] ?? 0;
   el.innerHTML = labels.map((l, i) => {
     let cls = 'step-dot w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 flex items-center justify-center text-xs sm:text-sm font-bold shrink-0 ';
-    if (i \ : '';
-    return \
-      
-        \${i 
-        \${l}
-      
+    if (i < atual) cls += 'done';
+    else if (i === atual) cls += 'active';
+    else cls += 'pending';
+    const line = i < labels.length - 1 ? \`<div class="flex-1 h-0.5 mx-1 sm:mx-2 step-line \${i < atual ? 'done' : ''}"></div>\` : '';
+    return \`<div class="flex items-center flex-1">
+      <div class="flex flex-col items-center gap-1.5">
+        <div class="\${cls}">\${i < atual ? '✓' : (i+1)}</div>
+        <div class="text-[10px] sm:text-xs text-slate-400 font-medium text-center">\${l}</div>
+      </div>
       \${line}
-    \;
+    </div>\`;
   }).join('');
 }
 
@@ -372,44 +378,44 @@ function render() {
   area.classList.add('fade-in');
 
   if (estado.step === 'contato') {
-    area.innerHTML = \
-      
-        
+    area.innerHTML = \`
+      <div class="space-y-5">
+        <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 text-sm text-slate-200">
            Olá! Que bom ter você aqui. Vamos fazer uma análise rápida e sem complicação do seu benefício.
-        
-        
-          Seu nome completo
-          
-        
-        
-          WhatsApp (com DDD)
-          
-        
-        
-        Continuar →
-      \;
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-200 mb-2">Seu nome completo</label>
+          <input id="i-nome" class="\${inputBase()}" placeholder="Como podemos te chamar?" value="\${estado.nome}" maxlength="60">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-200 mb-2">WhatsApp (com DDD)</label>
+          <input id="i-telefone" class="\${inputBase()}" placeholder="(17) 99999-9999" value="\${estado.telefone}" maxlength="15">
+        </div>
+        <div id="erro-contato" class="text-sm text-red-400 hidden"></div>
+        <button onclick="avancarContato()" class="w-full btn-primary text-white font-bold btn-big rounded-lg">Continuar →</button>
+      </div>\`;
     const tel = document.getElementById('i-telefone');
     if (tel) aplicarMascara(tel);
     return;
   }
 
   if (estado.step === 'router') {
-    area.innerHTML = \
-      
-        
-          Etapa 2 de 4
-          \${ROUTER.label}
-          Escolha a opção que mais se parece com a sua situação.
-        
-        
-          \${ROUTER.options.map(o => \
-            
+    area.innerHTML = \`
+      <div class="space-y-4">
+        <div>
+          <div class="text-xs text-blue-400 font-mono uppercase tracking-wider mb-2">Etapa 2 de 4</div>
+          <label class="block text-lg sm:text-xl font-bold text-white mb-1">\${ROUTER.label}</label>
+          <p class="text-sm text-slate-400">Escolha a opção que mais se parece com a sua situação.</p>
+        </div>
+        <div class="space-y-2.5">
+          \${ROUTER.options.map(o => \`
+            <button onclick='escolherRouter(\${JSON.stringify(o.value)})' class="option-btn w-full text-left rounded-xl p-4 text-sm sm:text-base text-white font-medium">
               \${o.label}
-            
-          \).join('')}
-        
-        ← Voltar
-      \;
+            </button>
+          \`).join('')}
+        </div>
+        <button onclick="voltar()" class="w-full btn-ghost text-white font-semibold py-3 rounded-lg text-sm">← Voltar</button>
+      </div>\`;
     return;
   }
 
@@ -417,41 +423,41 @@ function render() {
     const q = estado.questions[estado.qIndex];
     let campo = '';
     if (q.type === 'choice') {
-      campo = \\${q.options.map(op => \\${op}\).join('')}\;
+      campo = \`<select id="i-resp" class="\${inputBase()}">\${q.options.map(op => \`<option value="\${op}">\${op}</option>\`).join('')}</select>\`;
     } else if (q.type === 'number') {
-      campo = \\;
+      campo = \`<input id="i-resp" type="number" class="\${inputBase()}" placeholder="\${q.unit || ''}" min="0">\`;
     } else {
-      campo = \\;
+      campo = \`<input id="i-resp" type="text" class="\${inputBase()}" placeholder="Sua resposta">\`;
     }
-    area.innerHTML = \
-      
-        
-          Etapa 3 de 4 · Pergunta \${estado.qIndex + 1} de \${estado.questions.length}
-          \${q.label}
-        
+    area.innerHTML = \`
+      <div class="space-y-5">
+        <div>
+          <div class="text-xs text-blue-400 font-mono uppercase tracking-wider mb-2">Etapa 3 de 4 · Pergunta \${estado.qIndex + 1} de \${estado.questions.length}</div>
+          <label class="block text-lg sm:text-xl font-bold text-white mb-1">\${q.label}</label>
+        </div>
         \${campo}
-        
-        
-          ← Voltar
-          \${estado.qIndex + 1 
-        
-      \;
+        <div id="erro-pergunta" class="text-sm text-red-400 hidden"></div>
+        <div class="flex gap-3">
+          <button onclick="voltar()" class="flex-1 btn-ghost text-white font-semibold py-3 rounded-lg">← Voltar</button>
+          <button onclick="responderPergunta()" class="flex-[2] btn-primary text-white font-bold btn-big rounded-lg">\${estado.qIndex + 1 < estado.questions.length ? 'Próxima →' : 'Continuar →'}</button>
+        </div>
+      </div>\`;
     return;
   }
 
   if (estado.step === 'observacao') {
-    area.innerHTML = \
-      
-        
-          Etapa 4 de 4
-          \${CAMPO_LIVRE.label}
-        
-        
-        
-          ← Voltar
-          Gerar análise 
-        
-      \;
+    area.innerHTML = \`
+      <div class="space-y-5">
+        <div>
+          <div class="text-xs text-blue-400 font-mono uppercase tracking-wider mb-2">Etapa 4 de 4</div>
+          <label class="block text-lg sm:text-xl font-bold text-white mb-1">\${CAMPO_LIVRE.label}</label>
+        </div>
+        <textarea id="i-obs" class="\${inputBase()} h-28 resize-none" placeholder="Conte o que quiser... ou pule esta etapa."></textarea>
+        <div class="flex gap-3">
+          <button onclick="voltar()" class="flex-1 btn-ghost text-white font-semibold py-3 rounded-lg">← Voltar</button>
+          <button onclick="finalizar()" class="flex-[2] btn-primary text-white font-bold btn-big rounded-lg">Gerar análise </button>
+        </div>
+      </div>\`;
     return;
   }
 
@@ -465,7 +471,22 @@ function avancarContato() {
   const nome = document.getElementById('i-nome').value.trim();
   const tel = document.getElementById('i-telefone').value.trim();
   const err = document.getElementById('erro-contato');
-  if (!nome || nome.length  b.key === key);
+  if (!nome || nome.length < 3) {
+    err.textContent = 'Por favor, digite seu nome completo.'; err.classList.remove('hidden'); return;
+  }
+  if (tel.replace(/\\D/g,'').length < 10) {
+    err.textContent = 'Por favor, digite um WhatsApp válido com DDD.'; err.classList.remove('hidden'); return;
+  }
+  estado.nome = nome;
+  estado.telefone = tel;
+  estado.step = 'router';
+  render();
+}
+
+function escolherRouter(value) {
+  estado.routerValue = value;
+  const key = value === 'bpc_loas_renovacao' ? 'bpc_loas' : value;
+  const benefit = BENEFITS.find(b => b.key === key);
   estado.benefitKey = key;
   estado.questions = benefit ? benefit.questions : [];
   estado.qIndex = 0;
@@ -482,7 +503,18 @@ function responderPergunta() {
     err.textContent = 'Essa pergunta é importante. Por favor, responda.'; err.classList.remove('hidden'); return;
   }
   estado.answers[q.id] = val;
-  if (estado.qIndex + 1  0) { estado.qIndex--; render(); return; }
+  if (estado.qIndex + 1 < estado.questions.length) {
+    estado.qIndex++;
+  } else {
+    estado.step = 'observacao';
+  }
+  render();
+}
+
+function voltar() {
+  if (estado.step === 'router') estado.step = 'contato';
+  else if (estado.step === 'perguntas') {
+    if (estado.qIndex > 0) { estado.qIndex--; render(); return; }
     else estado.step = 'router';
   }
   else if (estado.step === 'observacao') estado.step = 'perguntas';
@@ -492,10 +524,10 @@ function responderPergunta() {
 async function finalizar() {
   estado.observacao = document.getElementById('i-obs').value.trim();
   const area = document.getElementById('form-area');
-  area.innerHTML = \
-    
-    Enviando sua análise... aguarde um instante.
-  \;
+  area.innerHTML = \`<div class="text-center py-10 space-y-4">
+    <div class="inline-block w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
+    <p class="text-slate-300 text-lg">Enviando sua análise... aguarde um instante.</p>
+  </div>\`;
 
   try {
     const res = await fetch('/api/leads', {
@@ -518,39 +550,39 @@ async function finalizar() {
     const classBg = data.classification === 'provavel_direito' ? 'bg-emerald-500/10 border-emerald-500/30' :
                     data.classification === 'precisa_avaliacao' ? 'bg-amber-500/10 border-amber-500/30' : 'bg-slate-500/10 border-slate-500/30';
 
-    estado.sucessoHTML = \
-      
-        🎉
-        
-          Obrigado, \${estado.nome.split(' ')[0]}!
-          Sua análise foi enviada com sucesso.
-        
-        
-          Resultado da triagem
-          \${classLabel}
-          \${rationale}
-        
-        
-          💡 Importante: este é um resultado inicial e automático. Não substitui uma análise completa.
-        
-        
-          
+    estado.sucessoHTML = \`
+      <div class="text-center space-y-5">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-500/20 text-3xl">🎉</div>
+        <div>
+          <h3 class="text-2xl sm:text-3xl font-bold text-white mb-2">Obrigado, \${estado.nome.split(' ')[0]}!</h3>
+          <p class="text-slate-300 text-base">Sua análise foi enviada com sucesso.</p>
+        </div>
+        <div class="\${classBg} border rounded-xl p-5 text-left space-y-2">
+          <div class="text-xs text-slate-400 uppercase font-semibold">Resultado da triagem</div>
+          <div class="text-xl font-bold \${classColor}">\${classLabel}</div>
+          <div class="text-sm text-slate-200 pt-3 border-t border-white/10 leading-relaxed">\${rationale}</div>
+        </div>
+        <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 text-sm text-slate-300 text-left">
+          💡 <strong class="text-white">Importante:</strong> este é um resultado inicial e automático. Não substitui uma análise completa.
+        </div>
+        <div class="space-y-3 pt-2">
+          <a href="https://wa.me/\${DEFAULT_PHONE}?text=\${encodeURIComponent(resumo)}" target="_blank" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold btn-big rounded-lg flex items-center justify-center gap-2">
              Enviar resumo no WhatsApp
-          
-          
+          </a>
+          <button onclick="reiniciar()" class="w-full btn-ghost text-white font-semibold py-3 rounded-lg">
             Fazer nova análise
-          
-        
-      \;
+          </button>
+        </div>
+      </div>\`;
 
     estado.step = 'sucesso';
     render();
   } catch (e) {
-    area.innerHTML = \
-      😔
-      Não conseguimos enviar sua análise.
-      Tentar novamente
-    \;
+    area.innerHTML = \`<div class="text-center py-10 space-y-4">
+      <div class="text-5xl">😔</div>
+      <p class="text-red-400 text-lg">Não conseguimos enviar sua análise.</p>
+      <button onclick="render()" class="w-full btn-primary text-white font-bold btn-big rounded-lg">Tentar novamente</button>
+    </div>\`;
   }
 }
 
@@ -599,55 +631,26 @@ async function carregarLeads() {
     const res = await fetch('/api/admin/leads', { headers: { 'Authorization': 'Bearer ' + authToken } });
     const data = await res.json();
     if (!data.leads || data.leads.length === 0) {
-      container.innerHTML = 'Nenhum lead ainda.';
+      container.innerHTML = '<p class="text-slate-500 text-center py-4">Nenhum lead ainda.</p>';
       return;
     }
-    container.innerHTML = data.leads.map(l => \
-      
-        
-          \${l.createdat ? new Date(l.createdat).toLocaleString('pt-BR') : ''}
-          \${l.classification || ''}
-        
-        \${l.name} — \${l.phone}
-        \${l.benefit_type || ''}
-        \${l.rationale || ''}
-      \).join('');
+    container.innerHTML = data.leads.map(l => \`
+      <div class="card rounded-lg p-4">
+        <div class="flex justify-between text-xs text-slate-400 mb-1">
+          <span>\${l.created_at ? new Date(l.created_at).toLocaleString('pt-BR') : ''}</span>
+          <span class="text-blue-400 font-bold">\${l.classification || ''}</span>
+        </div>
+        <div class="font-bold text-white text-base">\${l.name} — \${l.phone}</div>
+        <div class="text-xs text-slate-500">\${l.benefit_type || ''}</div>
+        <div class="text-xs text-slate-400 mt-2 leading-relaxed">\${l.rationale || ''}</div>
+      </div>\`).join('');
   } catch (e) {
-    container.innerHTML = 'Erro ao carregar leads.';
+    container.innerHTML = '<p class="text-red-400">Erro ao carregar leads.</p>';
   }
 }
 
 render();
-
-;
+</script>
+</body>
+</html>`;
 }
-
-📋 O que fazer agora (3 passos)
-
-Substituir o index.js no GitHub
-Abra: https://github.com/FamiliaHDMicro/PreviControl/edit/main/index.js
-Apague tudo que está lá
-Cole o código acima
-Clique em "Commit changes"
-
-Verificar os 4 secrets no Cloudflare
-Vá em Workers & Pages → prevconsulta → Settings → Variables and Secrets e confirme:
-
-| Nome | Tipo | Valor |
-|---|---|---|
-| ADMIN_TOKEN | Secret | cleiton7449 |
-| USER1_TOKEN | Secret | user123a |
-| USER2_TOKEN | Secret | user123b |
-| WHATSAPP_NUMBER | Secret | 5517991087449 |
-
-Aguardar o deploy automático
-O Cloudflare vai detectar o push no GitHub e fazer o deploy sozinho (2-3 minutos).
-
-✅ Depois do deploy, teste:
-
-Abra prevcontrol.hdmicro-cliente.workers.dev
-Clique em "Área Restrita →"
-Tente: admin / cleiton7449`
-Deve abrir o painel com os leads
-
-Se der erro, me manda a mensagem exata que eu resolvo na hora. 🚀
