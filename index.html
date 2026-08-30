@@ -1,0 +1,1240 @@
+
+                        <!DOCTYPE html>
+                        <html lang="en">
+                        <head>
+                            <meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <style>
+                body {
+                  background-color: white; /* Ensure the iframe has a white background */
+                }
+
+                * { font-family: 'Inter', system-ui, -apple-system, sans-serif; box-sizing: border-box; }
+body {
+  background: #0a1628;
+  color: #e2e8f0;
+  min-height: 100vh;
+  margin: 0;
+  overflow-x: hidden;
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(59,130,246,0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59,130,246,0.08) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(59,130,246,0.18) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(139,92,246,0.12) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.top-header {
+  position: relative;
+  z-index: 10;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.5rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.logo { display: flex; align-items: center; gap: 0.6rem; }
+.logo-icon {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; color: #fff; font-size: 1.1rem;
+}
+.logo-text { font-weight: 700; color: #fff; font-size: 1.1rem; }
+.header-badge {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  display: none;
+}
+@media (min-width: 640px) { .header-badge { display: block; } }
+
+.progress-bar {
+  position: fixed; top: 0; left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+  transition: width 0.5s ease;
+  z-index: 100;
+  width: 0%;
+}
+
+.slide-viewport {
+  position: relative;
+  z-index: 1;
+  width: 100vw;
+  overflow: hidden;
+  padding: 1rem 0 5rem;
+}
+.slide-track {
+  display: flex;
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+.slide {
+  min-width: 100vw;
+  padding: 0 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+@media (min-width: 768px) {
+  .slide { min-width: 100%; padding: 0; }
+}
+
+.module-card {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(59,130,246,0.2);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  width: 100%;
+  max-width: 720px;
+  padding: 2rem;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.4);
+  position: relative;
+  overflow: hidden;
+}
+.module-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+}
+.module-number {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(59,130,246,0.15);
+  border: 1px solid rgba(59,130,246,0.3);
+  color: #93c5fd;
+  padding: 0.4rem 1rem;
+  border-radius: 50px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 1.5rem;
+}
+.module-title {
+  font-size: clamp(1.5rem, 3.5vw, 2.2rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.8rem;
+  color: #fff;
+}
+.module-subtitle {
+  color: #94a3b8;
+  font-size: 1rem;
+  margin: 0 0 2rem;
+}
+
+.input-base {
+  width: 100%;
+  background: rgba(10, 22, 40, 0.8);
+  border: 1px solid rgba(59,130,246,0.25);
+  border-radius: 14px;
+  padding: 1rem 1.2rem;
+  color: #fff;
+  font-size: 1.05rem;
+  font-family: inherit;
+  transition: all 0.3s ease;
+}
+.input-base:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59,130,246,0.2);
+  background: rgba(10, 22, 40, 1);
+}
+.input-base::placeholder { color: #64748b; }
+
+.option-btn {
+  width: 100%;
+  text-align: left;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(59,130,246,0.2);
+  border-radius: 14px;
+  padding: 1.1rem 1.3rem;
+  color: #e2e8f0;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: all 0.25s ease;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  font-family: inherit;
+}
+.option-btn:hover {
+  background: rgba(59,130,246,0.12);
+  border-color: #3b82f6;
+  transform: translateX(6px);
+}
+.option-btn.selected {
+  background: rgba(59,130,246,0.2);
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+}
+.option-marker {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: 2px solid rgba(148,163,184,0.3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.85rem; font-weight: 700;
+  flex-shrink: 0;
+  transition: all 0.25s ease;
+  color: #94a3b8;
+}
+.option-btn.selected .option-marker {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #fff;
+}
+
+.nav-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-top: 2rem;
+  flex-wrap: wrap;
+}
+.nav-btn {
+  padding: 0.9rem 1.8rem;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: inherit;
+  border: none;
+}
+.nav-btn-primary {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #fff;
+}
+.nav-btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1d4ed8, #1e40af);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(37,99,235,0.4);
+}
+.nav-btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.nav-btn-ghost {
+  background: rgba(30,41,59,0.6);
+  border: 1px solid rgba(148,163,184,0.2);
+  color: #e2e8f0;
+}
+.nav-btn-ghost:hover {
+  background: rgba(30,41,59,0.9);
+  border-color: rgba(148,163,184,0.4);
+}
+.nav-btn-whatsapp {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+  width: 100%;
+  justify-content: center;
+  text-decoration: none;
+}
+.nav-btn-whatsapp:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(16,185,129,0.4);
+}
+
+.slide-dots {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.5rem;
+  z-index: 50;
+  background: rgba(10,22,40,0.7);
+  backdrop-filter: blur(10px);
+  padding: 0.6rem 1rem;
+  border-radius: 50px;
+  border: 1px solid rgba(59,130,246,0.2);
+}
+.slide-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: rgba(148,163,184,0.3);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+.slide-dot.active {
+  background: #3b82f6;
+  width: 24px;
+  border-radius: 4px;
+}
+.slide-dot.done { background: #10b981; }
+
+.success-icon {
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981, #059669);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2.5rem;
+  margin: 0 auto 1.5rem;
+  animation: popIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  color: #fff;
+}
+@keyframes popIn {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.result-card {
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+}
+.result-card.success {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+.result-card.warning {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+.result-card.neutral {
+  background: rgba(148,163,184,0.1);
+  border: 1px solid rgba(148,163,184,0.3);
+}
+
+.info-box {
+  background: rgba(59,130,246,0.1);
+  border: 1px solid rgba(59,130,246,0.2);
+  border-radius: 14px;
+  padding: 1rem 1.2rem;
+  font-size: 0.9rem;
+  color: #cbd5e1;
+  line-height: 1.5;
+}
+
+.footer-note {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  font-size: 0.8rem;
+  color: #64748b;
+  padding: 1rem;
+}
+
+.field-group { margin-bottom: 1.2rem; }
+.field-label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin-bottom: 0.5rem;
+}
+.field-error {
+  font-size: 0.85rem;
+  color: #f87171;
+  margin-top: 0.5rem;
+  display: none;
+}
+.field-error.show { display: block; }
+
+.options-stack { display: flex; flex-direction: column; gap: 0.6rem; }
+
+@media (max-width: 640px) {
+  .module-card { padding: 1.5rem; border-radius: 20px; }
+  .nav-btn { padding: 0.8rem 1.2rem; font-size: 0.9rem; }
+  .nav-row { flex-direction: column; }
+  .nav-row .nav-btn { width: 100%; justify-content: center; }
+}
+
+
+              </style>
+                        </head>
+                        <body>
+                            <!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PrevConsulta — Triagem Previdenciária Gratuita</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+
+  <header class="top-header">
+    <div class="logo">
+      <div class="logo-icon">P</div>
+      <span class="logo-text">PrevConsulta</span>
+    </div>
+    <div class="header-badge">Triagem gratuita · 100% online</div>
+  </header>
+
+  <main class="slide-viewport">
+    <div class="slide-track" id="slideTrack"></div>
+  </main>
+
+  <div class="slide-dots" id="slideDots"></div>
+
+  <div class="footer-note">
+    💡 Análise inicial e automática. Não substitui consulta com advogado.
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
+
+
+              <script>
+                              // index.js — PrevControl Worker (Terminal Burro)
+// Custo zero · Sem IA · Sem juridiquês
+import {
+  getAllBenefits,
+  getBenefitConfig,
+  runTriagem,
+  CLASSIFICATION_LABELS,
+  ROUTER_QUESTION,
+  CAMPO_LIVRE_OPCIONAL,
+  resolveBenefitKey
+} from "./rules.js";
+
+export default {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+    const path = url.pathname;
+
+    const corsHeaders = {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    };
+    if (request.method === "OPTIONS") {
+      return new Response(null, { headers: corsHeaders });
+    }
+
+    // API: Login
+    if (path === "/api/admin/login" && request.method === "POST") {
+      return handleLogin(request, env, corsHeaders);
+    }
+
+    // API: Salvar lead
+    if (path === "/api/leads" && request.method === "POST") {
+      return handleLeads(request, env, corsHeaders);
+    }
+
+    // API: Listar leads
+    if (path === "/api/admin/leads" && request.method === "GET") {
+      return handleAdminAuth(request, env, async () => {
+        const filter = url.searchParams.get("classification");
+        const status = url.searchParams.get("status");
+        let query = "SELECT * FROM leads";
+        const conditions = [];
+        const params = [];
+        if (filter) { conditions.push("classification = ?"); params.push(filter); }
+        if (status) { conditions.push("status = ?"); params.push(status); }
+        if (conditions.length) query += " WHERE " + conditions.join(" AND ");
+        query += " ORDER BY created_at DESC LIMIT 200";
+        const result = await env.DB.prepare(query).bind(...params).all();
+        return json({ leads: result.results }, corsHeaders);
+      }, corsHeaders);
+    }
+
+    // API: Atualizar lead
+    if (path === "/api/admin/leads" && request.method === "POST") {
+      return handleAdminAuth(request, env, async () => {
+        const body = await request.json();
+        const { status, notes, id } = body;
+        if (!id) return json({ error: "id é obrigatório" }, corsHeaders, 400);
+        const updates = [];
+        const params = [];
+        if (status) { updates.push("status = ?"); params.push(status); }
+        if (notes !== undefined) { updates.push("notes = ?"); params.push(notes); }
+        if (status === "contatado" && !notes) {
+          updates.push("contacted_at = datetime('now')");
+        }
+        if (!updates.length) return json({ error: "Nada para atualizar" }, corsHeaders, 400);
+        params.push(id);
+        await env.DB.prepare(
+          `UPDATE leads SET ${updates.join(", ")} WHERE id = ?`
+        ).bind(...params).run();
+        return json({ ok: true }, corsHeaders);
+      }, corsHeaders);
+    }
+
+    // API: Dados do formulário (para o frontend)
+    if (path === "/api/config" && request.method === "GET") {
+      return json({
+        router: ROUTER_QUESTION,
+        benefits: getAllBenefits(),
+        campoLivre: CAMPO_LIVRE_OPCIONAL
+      }, corsHeaders);
+    }
+
+    // Fallback: servir assets estáticos (HTML/CSS/JS da pasta public/)
+    if (env.ASSETS) {
+      return env.ASSETS.fetch(request);
+    }
+
+    return new Response("Not found", { status: 404 });
+  },
+};
+
+async function handleLogin(request, env, corsHeaders) {
+  try {
+    const body = await request.json();
+    const { username, password } = body;
+    const users = [
+      { user: "admin", pass: env.ADMIN_TOKEN, role: "Administrador (Cleiton)" },
+      { user: "atendimento1", pass: env.USER1_TOKEN, role: "Atendente 01" },
+      { user: "atendimento2", pass: env.USER2_TOKEN, role: "Atendente 02" }
+    ];
+    const found = users.find(u => u.user === username && u.pass === password);
+    if (!found) return json({ error: "Usuário ou senha incorretos" }, corsHeaders, 401);
+    return json({ ok: true, role: found.role }, corsHeaders);
+  } catch (e) {
+    return json({ error: "Erro na requisição" }, corsHeaders, 400);
+  }
+}
+
+async function handleLeads(request, env, corsHeaders) {
+  try {
+    const body = await request.json();
+    const { nome, telefone, routerValue, answers, observacao } = body;
+    if (!nome || !telefone || !routerValue) {
+      return json({ ok: false, message: "Nome, telefone e situação são obrigatórios." }, corsHeaders, 400);
+    }
+    const benefitKey = resolveBenefitKey(routerValue);
+    const config = getBenefitConfig(benefitKey);
+    if (!config) {
+      return json({ ok: false, message: "Situação não reconhecida." }, corsHeaders, 400);
+    }
+    const resultado = runTriagem(benefitKey, answers || {});
+    const classificationLabel = CLASSIFICATION_LABELS[resultado.class] || resultado.class;
+
+    const resumo = montarResumo({
+      nome, telefone, benefitLabel: config.label, routerValue,
+      answers, observacao, resultado, classificationLabel
+    });
+
+    if (env.DB) {
+      await env.DB.prepare(
+        `INSERT INTO leads (name, phone, email, benefit_type, answers_json, classification, rationale, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'novo')`
+      ).bind(
+        nome, telefone, null, benefitKey,
+        JSON.stringify(answers || {}), resultado.class, resultado.rationale
+      ).run();
+    }
+
+    return json({
+      ok: true, resumo,
+      classification: resultado.class,
+      classification_label: classificationLabel,
+      rationale: resultado.rationale
+    }, corsHeaders);
+  } catch (e) {
+    console.error("erro /api/leads:", e);
+    return json({ ok: false, message: "Erro ao salvar: " + e.message }, corsHeaders, 500);
+  }
+}
+
+function montarResumo({ nome, telefone, benefitLabel, routerValue, answers, observacao, resultado, classificationLabel }) {
+  const linhas = [
+    `Olá! Sou ${nome} (${telefone}).`,
+    `Situação: ${benefitLabel}${routerValue === "bpc_loas_renovacao" ? " — Renovação/Revisão periódica" : ""}`,
+    ``,
+    ...Object.entries(answers || {}).map(([k, v]) => `- ${k}: ${v}`),
+  ];
+  if (observacao) linhas.push(``, `Observação da pessoa: ${observacao}`);
+  linhas.push(
+    ``,
+    `📋 Resultado da triagem automática: ${classificationLabel}`,
+    `📝 ${resultado.rationale}`,
+    ``,
+    `Este é um resultado inicial e automático — não substitui análise jurídica completa.`
+  );
+  return linhas.join("\n");
+}
+
+async function handleAdminAuth(request, env, handler, corsHeaders) {
+  const auth = request.headers.get("Authorization") || "";
+  const token = auth.replace("Bearer ", "");
+  const validTokens = [env.ADMIN_TOKEN, env.USER1_TOKEN, env.USER2_TOKEN];
+  if (!validTokens.includes(token)) {
+    return json({ error: "Não autorizado" }, corsHeaders, 401);
+  }
+  return handler();
+}
+
+function json(data, corsHeaders, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { "Content-Type": "application/json", ...corsHeaders },
+  });
+}
+
+// PrevControl — Motor de regras determinístico
+// Resultado: provavel_direito | precisa_avaliacao | sem_direito
+
+const ROUTER_QUESTION = {
+  id: "situacao_router",
+  label: "O que está acontecendo com você hoje?",
+  type: "choice",
+  options: [
+    { value: "aposentadoria_idade", label: "Estou perto da idade de aposentar" },
+    { value: "aposentadoria_tempo", label: "Já tenho bastante tempo de contribuição e quero saber se posso me aposentar" },
+    { value: "auxilio_doenca", label: "Estou doente/afastado e não consigo trabalhar" },
+    { value: "salario_maternidade", label: "Estou grávida, tive um filho recentemente ou adotei" },
+    { value: "pensao_morte", label: "Perdi alguém da família que era aposentado/segurado" },
+    { value: "bpc_loas", label: "Tenho deficiência ou sou idoso de baixa renda" },
+    { value: "bpc_loas_renovacao", label: "Já recebo BPC/LOAS e preciso renovar (revisão periódica)" },
+    { value: "trabalhista", label: "Fui demitido ou tenho dúvida trabalhista" },
+    { value: "revisao", label: "Já recebo um benefício e acho o valor errado" }
+  ]
+};
+
+const CAMPO_LIVRE_OPCIONAL = {
+  id: "observacao_livre",
+  label: "Quer contar mais alguma coisa? (opcional)",
+  type: "text",
+  required: false
+};
+
+function resolveBenefitKey(routerValue) {
+  if (routerValue === "bpc_loas_renovacao") return "bpc_loas";
+  return routerValue;
+}
+
+const BENEFITS = {
+  aposentadoria_idade: {
+    label: "Aposentadoria por idade",
+    questions: [
+      { id: "age", label: "Qual a sua idade?", type: "number", unit: "anos", required: true },
+      { id: "contrib_years", label: "Quantos anos você já contribuiu para o INSS?", type: "number", unit: "anos", required: true },
+      { id: "contrib_months", label: "E quantos meses a mais (além dos anos)?", type: "number", unit: "meses", required: false },
+      { id: "gender", label: "Você é homem ou mulher?", type: "choice", options: ["homem", "mulher"], required: true }
+    ],
+    evaluate(answers) {
+      const age = Number(answers.age);
+      const cy = Number(answers.contrib_years) || 0;
+      const cm = Number(answers.contrib_months) || 0;
+      const contrib = cy + (cm / 12);
+      const isMale = answers.gender === "homem";
+      if (!age || !cy) return { class: "precisa_avaliacao", rationale: "Precisamos da sua idade e do tempo de contribuição para avaliar." };
+      const minAge = isMale ? 65 : 62;
+      const minContrib = 15;
+      if (age >= minAge && contrib >= minContrib)
+        return { class: "provavel_direito", rationale: `Ótima notícia! Você atende a idade mínima (${minAge} anos) e o tempo de contribuição (${cy} anos e ${cm} meses).` };
+      const extra = contrib - minContrib;
+      if (extra > 0 && age >= minAge - extra * 0.5)
+        return { class: "provavel_direito", rationale: "Pode se encaixar na regra de transição, pois você tem mais tempo de contribuição que o mínimo." };
+      if (age >= minAge - 2 && contrib >= minContrib)
+        return { class: "precisa_avaliacao", rationale: "Você está bem pertinho da idade mínima. Vale a pena analisar com calma." };
+      return { class: "sem_direito", rationale: `Ainda faltam ${Math.max(minAge - age, 0)} anos de idade ou mais tempo de contribuição. Mas fique tranquilo(a), podemos te orientar.` };
+    }
+  },
+  aposentadoria_tempo: {
+    label: "Aposentadoria por tempo de contribuição",
+    questions: [
+      { id: "contrib_years", label: "Quantos anos você já contribuiu para o INSS?", type: "number", unit: "anos", required: true },
+      { id: "gender", label: "Você é homem ou mulher?", type: "choice", options: ["homem", "mulher"], required: true },
+      { id: "started_before_2019", label: "Você já contribuía antes de novembro de 2019?", type: "choice", options: ["sim", "nao"], required: true }
+    ],
+    evaluate(answers) {
+      const contrib = Number(answers.contrib_years);
+      const isMale = answers.gender === "homem";
+      const before = answers.started_before_2019 === "sim";
+      const target = isMale ? 35 : 30;
+      if (!contrib) return { class: "precisa_avaliacao", rationale: "Precisamos saber seu tempo de contribuição." };
+      if (contrib >= target && before)
+        return { class: "provavel_direito", rationale: `Ótima notícia! Você tem ${contrib} anos (mínimo ${target}) e já contribuía antes da Reforma de 2019.` };
+      if (contrib >= target - 2 && before)
+        return { class: "precisa_avaliacao", rationale: `Faltam poucos anos (${target - contrib}). Com o pedágio da regra de transição, pode haver direito.` };
+      if (!before)
+        return { class: "sem_direito", rationale: "A aposentadoria por tempo puro acabou na Reforma de 2019. Mas existem outras regras de transição que podemos analisar." };
+      return { class: "sem_direito", rationale: `Faltam ${target - contrib} anos de contribuição.` };
+    }
+  },
+  auxilio_doenca: {
+    label: "Auxílio-doença",
+    questions: [
+      { id: "contrib_months", label: "Quantos meses você já contribuiu para o INSS?", type: "number", unit: "meses", required: true },
+      { id: "incapacity", label: "Você está impossibilitado(a) de trabalhar por motivo de saúde?", type: "choice", options: ["sim", "nao"], required: true },
+      { id: "has_medical_report", label: "Você tem laudo médico ou atestado?", type: "choice", options: ["sim", "nao"], required: true }
+    ],
+    evaluate(answers) {
+      const cm = Number(answers.contrib_months);
+      if (answers.incapacity !== "sim") return { class: "sem_direito", rationale: "O auxílio-doença exige que a pessoa esteja impossibilitada de trabalhar." };
+      if (cm >= 12 && answers.has_medical_report === "sim")
+        return { class: "provavel_direito", rationale: "Você tem a carência necessária (12 meses), está incapacitado(a) e tem laudo médico. Ótimo!" };
+      if (cm >= 12)
+        return { class: "precisa_avaliacao", rationale: "Você tem a carência, mas vai precisar de laudo médico para a perícia do INSS." };
+      return { class: "precisa_avaliacao", rationale: `Faltam ${12 - cm} meses de carência (salvo se for doença do trabalho ou acidente).` };
+    }
+  },
+  salario_maternidade: {
+    label: "Salário-maternidade",
+    questions: [
+      { id: "contrib_months", label: "Quantos meses você já contribuiu para o INSS?", type: "number", unit: "meses", required: true },
+      { id: "situation", label: "Qual a sua situação?", type: "choice", options: ["gravida", "ja_nasceu", "adocao"], required: true }
+    ],
+    evaluate(answers) {
+      const cm = Number(answers.contrib_months);
+      if (cm >= 10) return { class: "provavel_direito", rationale: "Parabéns! Você tem a carência de 10 meses necessária para o salário-maternidade." };
+      if (cm > 0) return { class: "precisa_avaliacao", rationale: `Faltam ${10 - cm} meses de carência. Mas fique tranquilo(a), podemos te orientar.` };
+      return { class: "sem_direito", rationale: "Sem contribuições registradas. Mas existem situações especiais — vale a pena conversar." };
+    }
+  },
+  pensao_morte: {
+    label: "Pensão por morte",
+    questions: [
+      { id: "relationship", label: "Qual seu parentesco com a pessoa falecida?", type: "choice", options: ["conjuge", "filho_menor", "filho_maior", "pais", "irmaos"], required: true },
+      { id: "deceased_contributed", label: "A pessoa falecida contribuía para o INSS?", type: "choice", options: ["sim", "nao", "nao_sei"], required: true }
+    ],
+    evaluate(answers) {
+      if (answers.deceased_contributed === "nao")
+        return { class: "sem_direito", rationale: "A pensão por morte exige que a pessoa falecida fosse segurada do INSS. Mas podemos analisar seu caso com calma." };
+      if (["conjuge", "filho_menor", "pais", "irmaos"].includes(answers.relationship))
+        return { class: "provavel_direito", rationale: "Como dependente de segurado do INSS, você provavelmente tem direito à pensão por morte." };
+      if (answers.relationship === "filho_maior")
+        return { class: "precisa_avaliacao", rationale: "Filho maior de 21 anos só tem direito em casos específicos (incapacidade ou universitário até 24). Vamos analisar." };
+      return { class: "precisa_avaliacao", rationale: "Situação precisa de análise detalhada." };
+    }
+  },
+  bpc_loas: {
+    label: "BPC / LOAS",
+    questions: [
+      { id: "age", label: "Qual a sua idade?", type: "number", unit: "anos", required: true },
+      { id: "incapacity", label: "Você tem alguma deficiência que limita sua vida e seu trabalho?", type: "choice", options: ["sim", "nao"], required: true },
+      { id: "family_members", label: "Quantas pessoas moram na sua casa, incluindo você?", type: "number", unit: "pessoas", required: true },
+      { id: "family_income", label: "A renda da família é de até 1/4 do salário-mínimo por pessoa?", type: "choice", options: ["sim", "nao", "nao_sei"], required: true }
+    ],
+    evaluate(answers) {
+      const age = Number(answers.age);
+      const hasDef = answers.incapacity === "sim";
+      const lowIncome = answers.family_income === "sim";
+      const fm = Number(answers.family_members) || null;
+      const note = fm ? ` (grupo familiar: ${fm} pessoa(s))` : "";
+      if (age >= 65 && lowIncome)
+        return { class: "provavel_direito", rationale: `Ótima notícia! Idoso(a) com 65+ e renda familiar dentro do limite — BPC/LOAS aplicável.${note}` };
+      if (hasDef && lowIncome)
+        return { class: "provavel_direito", rationale: `Pessoa com deficiência e renda familiar dentro do limite — BPC/LOAS aplicável.${note}` };
+      if ((age >= 65 || hasDef) && answers.family_income === "nao_sei")
+        return { class: "precisa_avaliacao", rationale: `Você atende ao critério pessoal, mas precisamos verificar a renda familiar.${note}` };
+      if (!lowIncome && answers.family_income === "nao")
+        return { class: "precisa_avaliacao", rationale: `A renda pode estar acima do limite padrão, mas existe possibilidade de concessão por vulnerabilidade. Vamos calcular direitinho.${note}` };
+      if (age < 65 && !hasDef)
+        return { class: "sem_direito", rationale: "O BPC exige 65+ ou deficiência. Mas podemos te orientar sobre outros benefícios." };
+      return { class: "precisa_avaliacao", rationale: `Situação precisa de análise detalhada.${note}` };
+    }
+  },
+  trabalhista: {
+    label: "Direitos trabalhistas",
+    questions: [
+      { id: "situation", label: "Qual a sua situação?", type: "choice", options: ["demissao_sem_justa", "demissao_justa", "rescisao_indireta", "acordo", "ainda_trabalhando"], required: true },
+      { id: "worked_months", label: "Quanto tempo você trabalhou lá (em meses)?", type: "number", unit: "meses", required: true },
+      { id: "received_verbas", label: "Recebeu as verbas rescisórias corretamente?", type: "choice", options: ["sim", "nao", "nao_sei"], required: true }
+    ],
+    evaluate(answers) {
+      const m = Number(answers.worked_months);
+      if (answers.situation === "demissao_sem_justa" && answers.received_verbas === "nao" && m > 0)
+        return { class: "provavel_direito", rationale: "Demissão sem justa causa sem pagamento de verbas — provável direito a cobrança." };
+      if (answers.situation === "rescisao_indireta" && m > 0)
+        return { class: "precisa_avaliacao", rationale: "Rescisão indireta exige comprovação de falta grave do empregador. Vamos analisar." };
+      if (answers.received_verbas === "sim")
+        return { class: "precisa_avaliacao", rationale: "Verbas pagas — pode haver diferenças a revisar. Vale a pena conferir." };
+      if (answers.situation === "ainda_trabalhando")
+        return { class: "precisa_avaliacao", rationale: "Emprego ativo — pode haver verbas vencidas a verificar." };
+      return { class: "precisa_avaliacao", rationale: "Situação trabalhista precisa de análise detalhada." };
+    }
+  },
+  revisao: {
+    label: "Revisão de benefício",
+    questions: [
+      { id: "benefit_type", label: "Qual benefício você recebe hoje?", type: "text", required: true },
+      { id: "years_receiving", label: "Há quantos anos você recebe?", type: "number", unit: "anos", required: true },
+      { id: "months_receiving", label: "E quantos meses a mais (além dos anos)?", type: "number", unit: "meses", required: false },
+      { id: "issue", label: "Qual o motivo da revisão?", type: "choice", options: ["valor_baixo", "erro_calculo", "mudanca_legislacao", "outro"], required: true }
+    ],
+    evaluate(answers) {
+      const y = Number(answers.years_receiving) || 0;
+      const m = Number(answers.months_receiving) || 0;
+      const total = y + (m / 12);
+      if (total > 10)
+        return { class: "precisa_avaliacao", rationale: `Você recebe há ${y} ano(s) e ${m} mes(es). Pode haver limite, mas algumas revisões ainda cabem. Vamos analisar.` };
+      if (answers.issue === "mudanca_legislacao")
+        return { class: "provavel_direito", rationale: "Mudança de legislação pode garantir revisão retroativa. Ótimo!" };
+      if (answers.issue === "erro_calculo" || answers.issue === "valor_baixo")
+        return { class: "precisa_avaliacao", rationale: "Possível erro de cálculo — precisa análise da RMI e das contribuições." };
+      return { class: "precisa_avaliacao", rationale: "Motivo da revisão precisa de análise detalhada." };
+    }
+  }
+};
+
+function getBenefitConfig(benefitType) {
+  return BENEFITS[benefitType] || null;
+}
+
+function getAllBenefits() {
+  return Object.entries(BENEFITS).map(([key, config]) => ({
+    key,
+    label: config.label,
+    questions: config.questions
+  }));
+}
+
+function runTriagem(benefitType, answers) {
+  const config = BENEFITS[benefitType];
+  if (!config)
+    return { class: "precisa_avaliacao", rationale: "Tipo de benefício não reconhecido." };
+  return config.evaluate(answers);
+}
+
+const CLASSIFICATION_LABELS = {
+  provavel_direito: "Provável direito",
+  precisa_avaliacao: "Precisa avaliação",
+  sem_direito: "Sem direito no momento"
+};
+
+export {
+  getBenefitConfig, getAllBenefits, runTriagem,
+  CLASSIFICATION_LABELS, ROUTER_QUESTION, CAMPO_LIVRE_OPCIONAL,
+  resolveBenefitKey
+};
+
+// PrevConsulta — Frontend (Terminal Burro)
+// Navegação horizontal em módulos · Custo zero
+
+const WHATSAPP_NUMBER = "5517991087449";
+
+const state = {
+  currentSlide: 0,
+  slides: [],
+  answers: {
+    nome: '', telefone: '',
+    routerValue: null, benefitKey: null, benefitLabel: '',
+    questionAnswers: {}, observacao: ''
+  },
+  routerOptions: [],
+  benefits: {},
+  campoLivre: null
+};
+
+// ============================================================
+//  MÁSCARA TELEFONE
+// ============================================================
+function mascaraTelefone(valor) {
+  const d = valor.replace(/\D/g, '').slice(0, 11);
+  if (d.length <= 2) return d.length ? `(${d}` : '';
+  if (d.length <= 7) return `(${d.slice(0,2)}) ${d.slice(2)}`;
+  return `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7,11)}`;
+}
+
+// ============================================================
+//  CARREGAR CONFIG DO SERVIDOR
+// ============================================================
+async function loadConfig() {
+  try {
+    const res = await fetch('/api/config');
+    const data = await res.json();
+    state.routerOptions = data.router.options;
+    state.benefits = {};
+    data.benefits.forEach(b => { state.benefits[b.key] = b; });
+    state.campoLivre = data.campoLivre;
+  } catch (e) {
+    console.error('Erro ao carregar config:', e);
+  }
+  buildSlides();
+}
+
+// ============================================================
+//  BUILD SLIDES
+// ============================================================
+function buildSlides() {
+  state.slides = [
+    { type: 'welcome' },
+    { type: 'router' },
+    // perguntas dinâmicas inseridas depois
+    { type: 'final' },
+    { type: 'success' }
+  ];
+  renderAllSlides();
+  renderDots();
+  goToSlide(0);
+}
+
+function renderAllSlides() {
+  const track = document.getElementById('slideTrack');
+  track.innerHTML = state.slides.map((slide, i) => renderSlide(slide, i)).join('');
+}
+
+function renderSlide(slide, i) {
+  if (slide.type === 'welcome') return renderWelcome(i);
+  if (slide.type === 'router') return renderRouter(i);
+  if (slide.type === 'question') return renderQuestion(slide, i);
+  if (slide.type === 'final') return renderFinal(i);
+  if (slide.type === 'success') return renderSuccess(i);
+  return '';
+}
+
+function renderWelcome(i) {
+  return `
+    <div class="slide" data-slide="${i}">
+      <div class="module-card">
+        <div class="module-number">👋 Início</div>
+        <h2 class="module-title">Descubra se você tem direito ao seu benefício</h2>
+        <p class="module-subtitle">Responda algumas perguntas simples. É rápido, sem complicação e sem juridiquês.</p>
+        <div class="field-group">
+          <label class="field-label">Seu nome completo</label>
+          <input id="field-nome" class="input-base" placeholder="Como podemos te chamar?" value="${state.answers.nome}" maxlength="60">
+        </div>
+        <div class="field-group">
+          <label class="field-label">WhatsApp (com DDD)</label>
+          <input id="field-telefone" class="input-base" placeholder="(17) 99999-9999" value="${state.answers.telefone}" maxlength="15">
+          <div class="field-error" id="erro-welcome"></div>
+        </div>
+        <div class="nav-row" style="justify-content: flex-end;">
+          <button onclick="nextSlide()" class="nav-btn nav-btn-primary">Continuar →</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderRouter(i) {
+  return `
+    <div class="slide" data-slide="${i}">
+      <div class="module-card">
+        <div class="module-number">📋 Etapa 1</div>
+        <h2 class="module-title">O que está acontecendo com você hoje?</h2>
+        <p class="module-subtitle">Escolha a opção que mais se parece com a sua situação.</p>
+        <div class="options-stack">
+          ${state.routerOptions.map((o, idx) => `
+            <button onclick="selectRouter('${o.value}', this)" class="option-btn ${state.answers.routerValue === o.value ? 'selected' : ''}" data-value="${o.value}">
+              <span class="option-marker">${idx + 1}</span>
+              <span>${o.label}</span>
+            </button>
+          `).join('')}
+        </div>
+        <div class="nav-row">
+          <button onclick="prevSlide()" class="nav-btn nav-btn-ghost">← Voltar</button>
+          <button onclick="confirmRouter()" class="nav-btn nav-btn-primary" id="btn-router-next" disabled>Continuar →</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderQuestion(slide, i) {
+  const q = slide.question;
+  const currentVal = state.answers.questionAnswers[q.id] || '';
+  let inputHtml = '';
+  if (q.type === 'choice') {
+    inputHtml = `
+      <div class="options-stack">
+        ${q.options.map((op, idx) => `
+          <button onclick="selectChoice('${q.id}', '${op}', this)" class="option-btn ${currentVal === op ? 'selected' : ''}" data-value="${op}">
+            <span class="option-marker">${String.fromCharCode(65 + idx)}</span>
+            <span>${op}</span>
+          </button>
+        `).join('')}
+      </div>`;
+  } else if (q.type === 'number') {
+    inputHtml = `<input id="field-${q.id}" class="input-base" type="number" min="0" placeholder="Ex: ${q.unit === 'anos' ? '25' : '12'}" value="${currentVal}">`;
+  } else {
+    inputHtml = `<input id="field-${q.id}" class="input-base" type="text" placeholder="Sua resposta" value="${currentVal}">`;
+  }
+
+  return `
+    <div class="slide" data-slide="${i}">
+      <div class="module-card">
+        <div class="module-number">📝 ${slide.number} · ${slide.questionIndex + 1} de ${slide.totalQuestions}</div>
+        <h2 class="module-title">${q.label}</h2>
+        ${q.unit ? `<p class="module-subtitle">Responda em ${q.unit}.</p>` : ''}
+        ${inputHtml}
+        <div class="field-error" id="erro-q-${q.id}"></div>
+        <div class="nav-row">
+          <button onclick="prevSlide()" class="nav-btn nav-btn-ghost">← Voltar</button>
+          <button onclick="confirmQuestion('${q.id}')" class="nav-btn nav-btn-primary">${slide.questionIndex + 1 < slide.totalQuestions ? 'Próxima →' : 'Continuar →'}</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderFinal(i) {
+  return `
+    <div class="slide" data-slide="${i}">
+      <div class="module-card">
+        <div class="module-number">✨ Finalizar</div>
+        <h2 class="module-title">Quer contar mais alguma coisa?</h2>
+        <p class="module-subtitle">Opcional. Conte o que quiser... ou pule esta etapa.</p>
+        <textarea id="field-observacao" class="input-base" style="min-height: 120px; resize: vertical;" placeholder="Ex: tenho uma cirurgia marcada, estou desempregado...">${state.answers.observacao}</textarea>
+        <div class="nav-row">
+          <button onclick="prevSlide()" class="nav-btn nav-btn-ghost">← Voltar</button>
+          <button onclick="submitFinal()" class="nav-btn nav-btn-primary">Gerar análise 🚀</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderSuccess(i) {
+  const classColor = state.answers.classification === 'provavel_direito' ? 'text-emerald-400' :
+                     state.answers.classification === 'precisa_avaliacao' ? 'text-amber-400' : 'text-slate-400';
+  const cardClass = state.answers.classification === 'provavel_direito' ? 'success' :
+                    state.answers.classification === 'precisa_avaliacao' ? 'warning' : 'neutral';
+  const label = state.answers.classificationLabel || '';
+  const rationale = state.answers.rationale || '';
+
+  return `
+    <div class="slide" data-slide="${i}">
+      <div class="module-card">
+        <div class="success-icon">✓</div>
+        <div class="module-number" style="margin: 0 auto 1rem; display: flex; width: fit-content;">🎉 Concluído</div>
+        <h2 class="module-title" style="text-align: center;">Obrigado, ${state.answers.nome.split(' ')[0]}!</h2>
+        <p class="module-subtitle" style="text-align: center;">Sua análise foi enviada com sucesso.</p>
+        <div class="result-card ${cardClass}">
+          <div style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; font-weight: 600; margin-bottom: 0.5rem;">Resultado da triagem</div>
+          <div style="font-size: 1.3rem; font-weight: 800; color: ${classColor === 'text-emerald-400' ? '#10b981' : classColor === 'text-amber-400' ? '#f59e0b' : '#94a3b8'}; margin-bottom: 0.8rem;">${label}</div>
+          <div style="font-size: 0.95rem; color: #e2e8f0; line-height: 1.6;">${rationale}</div>
+        </div>
+        <div class="info-box">
+          💡 <strong style="color: #fff;">Importante:</strong> este é um resultado inicial e automático. Não substitui uma análise completa feita por um profissional.
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 0.8rem; margin-top: 1.5rem;">
+          <a href="#" id="btn-whatsapp" class="nav-btn nav-btn-whatsapp">📱 Enviar resumo no WhatsApp</a>
+          <button onclick="restart()" class="nav-btn nav-btn-ghost" style="width: 100%; justify-content: center;">Fazer nova análise</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ============================================================
+//  NAVIGATION
+// ============================================================
+function goToSlide(index) {
+  if (index < 0 || index >= state.slides.length) return;
+  state.currentSlide = index;
+  const track = document.getElementById('slideTrack');
+  const percent = (index / (state.slides.length - 1)) * 100;
+  track.style.transform = `translateX(-${percent}%)`;
+
+  document.querySelectorAll('.slide-dot').forEach((dot, i) => {
+    dot.classList.remove('active', 'done');
+    if (i === index) dot.classList.add('active');
+    else if (i < index) dot.classList.add('done');
+  });
+
+  document.getElementById('progressBar').style.width = `${percent}%`;
+
+  setTimeout(() => {
+    const firstInput = document.querySelector(`[data-slide="${index}"] input, [data-slide="${index}"] textarea`);
+    if (firstInput) firstInput.focus();
+  }, 400);
+}
+
+function nextSlide() {
+  const slide = state.slides[state.currentSlide];
+  if (slide.type === 'welcome') {
+    const nome = document.getElementById('field-nome').value.trim();
+    const tel = document.getElementById('field-telefone').value.trim();
+    const err = document.getElementById('erro-welcome');
+    if (!nome || nome.length < 3) {
+      err.textContent = 'Por favor, digite seu nome completo.';
+      err.classList.add('show');
+      return;
+    }
+    if (tel.replace(/\D/g,'').length < 10) {
+      err.textContent = 'Por favor, digite um WhatsApp válido com DDD.';
+      err.classList.add('show');
+      return;
+    }
+    err.classList.remove('show');
+    state.answers.nome = nome;
+    state.answers.telefone = tel;
+  }
+  goToSlide(state.currentSlide + 1);
+}
+
+function prevSlide() {
+  goToSlide(state.currentSlide - 1);
+}
+
+function selectRouter(value, btn) {
+  state.answers.routerValue = value;
+  document.querySelectorAll('[data-slide="1"] .option-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  document.getElementById('btn-router-next').disabled = false;
+}
+
+function confirmRouter() {
+  if (!state.answers.routerValue) return;
+  const key = state.answers.routerValue === 'bpc_loas_renovacao' ? 'bpc_loas' : state.answers.routerValue;
+  const benefit = state.benefits[key];
+  state.answers.benefitKey = key;
+  state.answers.benefitLabel = benefit ? benefit.label : '';
+  state.answers.questionAnswers = {};
+
+  const questionSlides = (benefit ? benefit.questions : []).map((q, idx) => ({
+    type: 'question',
+    number: 'Etapa 2',
+    question: q,
+    questionIndex: idx,
+    totalQuestions: benefit ? benefit.questions.length : 0
+  }));
+
+  state.slides = state.slides.filter(s => s.type !== 'question');
+  state.slides.splice(2, 0, ...questionSlides);
+
+  renderAllSlides();
+  renderDots();
+  goToSlide(2);
+}
+
+function selectChoice(qId, value, btn) {
+  state.answers.questionAnswers[qId] = value;
+  const slideIdx = state.currentSlide;
+  document.querySelectorAll(`[data-slide="${slideIdx}"] .option-btn`).forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+
+function confirmQuestion(qId) {
+  const slide = state.slides[state.currentSlide];
+  const q = slide.question;
+  const err = document.getElementById(`erro-q-${qId}`);
+
+  if (q.type === 'choice') {
+    if (!state.answers.questionAnswers[qId]) {
+      err.textContent = 'Por favor, selecione uma opção.';
+      err.classList.add('show');
+      return;
+    }
+  } else {
+    const val = document.getElementById(`field-${qId}`).value.trim();
+    if (q.required && !val) {
+      err.textContent = 'Essa pergunta é importante. Por favor, responda.';
+      err.classList.add('show');
+      return;
+    }
+    state.answers.questionAnswers[qId] = val;
+  }
+  err.classList.remove('show');
+  goToSlide(state.currentSlide + 1);
+}
+
+async function submitFinal() {
+  state.answers.observacao = document.getElementById('field-observacao').value.trim();
+
+  const slide = state.slides[state.currentSlide];
+  const card = slide ? slide.querySelector ? null : document.querySelector(`[data-slide="${state.currentSlide}"] .module-card`) : null;
+  const currentCard = document.querySelector(`[data-slide="${state.currentSlide}"] .module-card`);
+  if (currentCard) {
+    currentCard.innerHTML = `
+      <div style="text-align: center; padding: 3rem 1rem;">
+        <div style="display: inline-block; width: 48px; height: 48px; border: 4px solid rgba(59,130,246,0.3); border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        <p style="color: #cbd5e1; margin-top: 1.5rem; font-size: 1.1rem;">Enviando sua análise... aguarde um instante.</p>
+      </div>
+      <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+    `;
+  }
+
+  try {
+    const res = await fetch('/api/leads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nome: state.answers.nome,
+        telefone: state.answers.telefone,
+        routerValue: state.answers.routerValue,
+        answers: state.answers.questionAnswers,
+        observacao: state.answers.observacao
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Erro ao salvar');
+
+    state.answers.classification = data.classification;
+    state.answers.classificationLabel = data.classification_label;
+    state.answers.rationale = data.rationale;
+
+    setTimeout(() => {
+      const btn = document.getElementById('btn-whatsapp');
+      if (btn) btn.href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(data.resumo)}`;
+    }, 100);
+
+    goToSlide(state.slides.length - 1);
+  } catch (e) {
+    if (currentCard) {
+      currentCard.innerHTML = `
+        <div style="text-align: center; padding: 3rem 1rem;">
+          <div style="font-size: 3rem; margin-bottom: 1rem;">😔</div>
+          <p style="color: #f87171; font-size: 1.1rem; margin-bottom: 1.5rem;">Não conseguimos enviar sua análise.</p>
+          <button onclick="location.reload()" class="nav-btn nav-btn-primary">Tentar novamente</button>
+        </div>
+      `;
+    }
+  }
+}
+
+function restart() {
+  state.answers = {
+    nome: '', telefone: '', routerValue: null, benefitKey: null,
+    benefitLabel: '', questionAnswers: {}, observacao: ''
+  };
+  state.slides = state.slides.filter(s => s.type !== 'question');
+  renderAllSlides();
+  renderDots();
+  goToSlide(0);
+}
+
+function renderDots() {
+  const dots = document.getElementById('slideDots');
+  dots.innerHTML = state.slides.map((_, i) => `<button class="slide-dot" onclick="goToSlide(${i})" aria-label="Ir para etapa ${i+1}"></button>`).join('');
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  loadConfig();
+
+  document.addEventListener('input', (e) => {
+    if (e.target.id === 'field-telefone') {
+      const pos = e.target.selectionStart;
+      const antes = e.target.value.length;
+      e.target.value = mascaraTelefone(e.target.value);
+      const depois = e.target.value.length;
+      e.target.setSelectionRange(pos + (depois - antes), pos + (depois - antes));
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.key === 'ArrowRight') nextSlide();
+    if (e.key === 'ArrowLeft') prevSlide();
+  });
+});
+
+
+              </script>
+                        </body>
+                        </html>
+                    
