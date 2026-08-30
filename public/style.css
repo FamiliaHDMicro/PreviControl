@@ -323,15 +323,6 @@ body::after {
   line-height: 1.5;
 }
 
-.footer-note {
-  position: relative;
-  z-index: 1;
-  text-align: center;
-  font-size: 0.8rem;
-  color: #64748b;
-  padding: 1rem;
-}
-
 .field-group { margin-bottom: 1.2rem; }
 .field-label {
   display: block;
