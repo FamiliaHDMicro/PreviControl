@@ -53,7 +53,6 @@ export default {
         const body = await request.json();
         const { status, notes, id } = body;
         if (!id) return json({ error: "id é obrigatório" }, corsHeaders, 400);
-
         const updates = [];
         const params = [];
         if (status) { updates.push("status = ?"); params.push(status); }
@@ -62,7 +61,6 @@ export default {
           updates.push("contacted_at = datetime('now')");
         }
         if (!updates.length) return json({ error: "Nada para atualizar" }, corsHeaders, 400);
-
         params.push(id);
         await env.DB.prepare(
           `UPDATE leads SET ${updates.join(", ")} WHERE id = ?`
@@ -82,16 +80,13 @@ async function handleLogin(request, env, corsHeaders) {
   try {
     const body = await request.json();
     const { username, password } = body;
-
     const users = [
       { user: "admin", pass: env.ADMIN_TOKEN, role: "Administrador (Cleiton)" },
       { user: "atendimento1", pass: env.USER1_TOKEN, role: "Atendente 01" },
       { user: "atendimento2", pass: env.USER2_TOKEN, role: "Atendente 02" }
     ];
-
     const found = users.find(u => u.user === username && u.pass === password);
     if (!found) return json({ error: "Usuário ou senha incorretos" }, corsHeaders, 401);
-
     return json({ ok: true, role: found.role }, corsHeaders);
   } catch (e) {
     return json({ error: "Erro na requisição" }, corsHeaders, 400);
@@ -102,25 +97,20 @@ async function handleLeads(request, env, corsHeaders) {
   try {
     const body = await request.json();
     const { nome, telefone, routerValue, answers, observacao } = body;
-
     if (!nome || !telefone || !routerValue) {
       return json({ ok: false, message: "Nome, telefone e situação são obrigatórios." }, corsHeaders, 400);
     }
-
     const benefitKey = resolveBenefitKey(routerValue);
     const config = getBenefitConfig(benefitKey);
     if (!config) {
       return json({ ok: false, message: "Situação não reconhecida." }, corsHeaders, 400);
     }
-
     const resultado = runTriagem(benefitKey, answers || {});
     const classificationLabel = CLASSIFICATION_LABELS[resultado.class] || resultado.class;
-
     const resumo = montarResumo({
       nome, telefone, benefitLabel: config.label, routerValue,
       answers, observacao, resultado, classificationLabel
     });
-
     if (env.DB) {
       await env.DB.prepare(
         `INSERT INTO leads (name, phone, email, benefit_type, answers_json, classification, rationale, status)
@@ -130,10 +120,8 @@ async function handleLeads(request, env, corsHeaders) {
         JSON.stringify(answers || {}), resultado.class, resultado.rationale
       ).run();
     }
-
     return json({
-      ok: true,
-      resumo,
+      ok: true, resumo,
       classification: resultado.class,
       classification_label: classificationLabel,
       rationale: resultado.rationale
@@ -165,12 +153,10 @@ function montarResumo({ nome, telefone, benefitLabel, routerValue, answers, obse
 async function handleAdminAuth(request, env, handler, corsHeaders) {
   const auth = request.headers.get("Authorization") || "";
   const token = auth.replace("Bearer ", "");
-
   const validTokens = [env.ADMIN_TOKEN, env.USER1_TOKEN, env.USER2_TOKEN];
   if (!validTokens.includes(token)) {
     return json({ error: "Não autorizado" }, corsHeaders, 401);
   }
-
   return handler();
 }
 
@@ -552,7 +538,7 @@ async function finalizar() {
 
     estado.sucessoHTML = \`
       <div class="text-center space-y-5">
-        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-500/20 text-3xl">🎉</div>
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-500/20 text-3xl"></div>
         <div>
           <h3 class="text-2xl sm:text-3xl font-bold text-white mb-2">Obrigado, \${estado.nome.split(' ')[0]}!</h3>
           <p class="text-slate-300 text-base">Sua análise foi enviada com sucesso.</p>
