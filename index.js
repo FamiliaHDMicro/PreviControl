@@ -1,5 +1,4 @@
 // index.js — PrevControl Worker (Terminal Burro / Single File)
-// Custo zero · Sem IA · Sem juridiquês · Respeito com 50+
 import {
   getAllBenefits,
   getBenefitConfig,
@@ -14,7 +13,6 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const path = url.pathname;
-
     const corsHeaders = {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
@@ -27,11 +25,9 @@ export default {
     if (path === "/api/admin/login" && request.method === "POST") {
       return handleLogin(request, env, corsHeaders);
     }
-
     if (path === "/api/leads" && request.method === "POST") {
       return handleLeads(request, env, corsHeaders);
     }
-
     if (path === "/api/admin/leads" && request.method === "GET") {
       return handleAdminAuth(request, env, async () => {
         const filter = url.searchParams.get("classification");
@@ -47,7 +43,6 @@ export default {
         return json({ leads: result.results }, corsHeaders);
       }, corsHeaders);
     }
-
     if (path === "/api/admin/leads" && request.method === "POST") {
       return handleAdminAuth(request, env, async () => {
         const body = await request.json();
@@ -538,7 +533,7 @@ async function finalizar() {
 
     estado.sucessoHTML = \`
       <div class="text-center space-y-5">
-        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-500/20 text-3xl"></div>
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-500/20 text-3xl">🎉</div>
         <div>
           <h3 class="text-2xl sm:text-3xl font-bold text-white mb-2">Obrigado, \${estado.nome.split(' ')[0]}!</h3>
           <p class="text-slate-300 text-base">Sua análise foi enviada com sucesso.</p>
@@ -549,7 +544,7 @@ async function finalizar() {
           <div class="text-sm text-slate-200 pt-3 border-t border-white/10 leading-relaxed">\${rationale}</div>
         </div>
         <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 text-sm text-slate-300 text-left">
-          💡 <strong class="text-white">Importante:</strong> este é um resultado inicial e automático. Não substitui uma análise completa.
+           <strong class="text-white">Importante:</strong> este é um resultado inicial e automático. Não substitui uma análise completa.
         </div>
         <div class="space-y-3 pt-2">
           <a href="https://wa.me/\${DEFAULT_PHONE}?text=\${encodeURIComponent(resumo)}" target="_blank" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold btn-big rounded-lg flex items-center justify-center gap-2">
