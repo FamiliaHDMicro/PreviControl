@@ -1,5 +1,4 @@
-// index.js — PrevControl Worker (Terminal Burro)
-// Custo zero · Sem IA · Sem juridiquês
+// index.js — PrevControl Worker
 import {
   getAllBenefits,
   getBenefitConfig,
@@ -24,17 +23,12 @@ export default {
       return new Response(null, { headers: corsHeaders });
     }
 
-    // API: Login
     if (path === "/api/admin/login" && request.method === "POST") {
       return handleLogin(request, env, corsHeaders);
     }
-
-    // API: Salvar lead
     if (path === "/api/leads" && request.method === "POST") {
       return handleLeads(request, env, corsHeaders);
     }
-
-    // API: Listar leads
     if (path === "/api/admin/leads" && request.method === "GET") {
       return handleAdminAuth(request, env, async () => {
         const filter = url.searchParams.get("classification");
@@ -50,8 +44,6 @@ export default {
         return json({ leads: result.results }, corsHeaders);
       }, corsHeaders);
     }
-
-    // API: Atualizar lead
     if (path === "/api/admin/leads" && request.method === "POST") {
       return handleAdminAuth(request, env, async () => {
         const body = await request.json();
@@ -72,8 +64,6 @@ export default {
         return json({ ok: true }, corsHeaders);
       }, corsHeaders);
     }
-
-    // API: Dados do formulário (para o frontend)
     if (path === "/api/config" && request.method === "GET") {
       return json({
         router: ROUTER_QUESTION,
@@ -82,11 +72,9 @@ export default {
       }, corsHeaders);
     }
 
-    // Fallback: servir assets estáticos (HTML/CSS/JS da pasta public/)
     if (env.ASSETS) {
       return env.ASSETS.fetch(request);
     }
-
     return new Response("Not found", { status: 404 });
   },
 };
