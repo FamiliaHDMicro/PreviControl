@@ -129,4 +129,64 @@
               </script>
                         </body>
                         </html>
+
+.footer-links {
+  position: relative;
+  z-index: 1;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 1rem;
+  text-align: center;
+}
+.footer-title {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+.footer-links-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.8rem;
+  margin-bottom: 1.5rem;
+}
+.footer-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(59,130,246,0.1);
+  border: 1px solid rgba(59,130,246,0.2);
+  border-radius: 12px;
+  padding: 0.6rem 1rem;
+  color: #cbd5e1;
+  text-decoration: none;
+  font-size: 0.85rem;
+  transition: all 0.25s ease;
+}
+.footer-link:hover {
+  background: rgba(59,130,246,0.2);
+  border-color: #3b82f6;
+  transform: translateY(-2px);
+  color: #fff;
+}
+.link-icon {
+  font-size: 1.1rem;
+}
+.footer-note {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 1rem;
+}
+@media (max-width: 640px) {
+  .footer-links-grid {
+    flex-direction: column;
+    align-items: center;
+  }
+  .footer-link {
+    width: 100%;
+    max-width: 280px;
+    justify-content: center;
+  }
+}
                     
