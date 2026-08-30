@@ -1,186 +1,233 @@
-// index.js — PrevControl Worker (Terminal Burro)
-// Custo zero · Sem IA · Sem juridiquês
-import {
-  getAllBenefits,
-  getBenefitConfig,
-  runTriagem,
-  CLASSIFICATION_LABELS,
-  ROUTER_QUESTION,
-  CAMPO_LIVRE_OPCIONAL,
-  resolveBenefitKey
-} from "./rules.js";
-
-export default {
+// index.js
+var index_default = {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const path = url.pathname;
-
-    const corsHeaders = {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    };
-    if (request.method === "OPTIONS") {
-      return new Response(null, { headers: corsHeaders });
-    }
-
-    // API: Login
-    if (path === "/api/admin/login" && request.method === "POST") {
-      return handleLogin(request, env, corsHeaders);
-    }
-
-    // API: Salvar lead
-    if (path === "/api/leads" && request.method === "POST") {
-      return handleLeads(request, env, corsHeaders);
-    }
-
-    // API: Listar leads
-    if (path === "/api/admin/leads" && request.method === "GET") {
-      return handleAdminAuth(request, env, async () => {
-        const filter = url.searchParams.get("classification");
-        const status = url.searchParams.get("status");
-        let query = "SELECT * FROM leads";
-        const conditions = [];
-        const params = [];
-        if (filter) { conditions.push("classification = ?"); params.push(filter); }
-        if (status) { conditions.push("status = ?"); params.push(status); }
-        if (conditions.length) query += " WHERE " + conditions.join(" AND ");
-        query += " ORDER BY created_at DESC LIMIT 200";
-        const result = await env.DB.prepare(query).bind(...params).all();
-        return json({ leads: result.results }, corsHeaders);
-      }, corsHeaders);
-    }
-
-    // API: Atualizar lead
-    if (path === "/api/admin/leads" && request.method === "POST") {
-      return handleAdminAuth(request, env, async () => {
-        const body = await request.json();
-        const { status, notes, id } = body;
-        if (!id) return json({ error: "id é obrigatório" }, corsHeaders, 400);
-        const updates = [];
-        const params = [];
-        if (status) { updates.push("status = ?"); params.push(status); }
-        if (notes !== undefined) { updates.push("notes = ?"); params.push(notes); }
-        if (status === "contatado" && !notes) {
-          updates.push("contacted_at = datetime('now')");
-        }
-        if (!updates.length) return json({ error: "Nada para atualizar" }, corsHeaders, 400);
-        params.push(id);
-        await env.DB.prepare(
-          `UPDATE leads SET ${updates.join(", ")} WHERE id = ?`
-        ).bind(...params).run();
-        return json({ ok: true }, corsHeaders);
-      }, corsHeaders);
-    }
-
-    // API: Dados do formulário (para o frontend)
-    if (path === "/api/config" && request.method === "GET") {
-      return json({
-        router: ROUTER_QUESTION,
-        benefits: getAllBenefits(),
-        campoLivre: CAMPO_LIVRE_OPCIONAL
-      }, corsHeaders);
-    }
-
-    // Fallback: servir assets estáticos (HTML/CSS/JS da pasta public/)
-    if (env.ASSETS) {
-      return env.ASSETS.fetch(request);
-    }
-
-    return new Response("Not found", { status: 404 });
-  },
-};
-
-async function handleLogin(request, env, corsHeaders) {
-  try {
-    const body = await request.json();
-    const { username, password } = body;
-    const users = [
-      { user: "admin", pass: env.ADMIN_TOKEN, role: "Administrador (Cleiton)" },
-      { user: "atendimento1", pass: env.USER1_TOKEN, role: "Atendente 01" },
-      { user: "atendimento2", pass: env.USER2_TOKEN, role: "Atendente 02" }
+    const DEFAULT_PHONE = "5517991087449";
+    const USERS_DATABASE = [
+      { user: "admin", pass: env.ADMIN_TOKEN || "admin7449", role: "Administrador (Cleiton)" },
+      { user: "atendimento1", pass: env.USER1_TOKEN || "user123", role: "Atendente 01" },
+      { user: "atendimento2", pass: env.USER2_TOKEN || "user1234", role: "Atendente 02" }
     ];
-    const found = users.find(u => u.user === username && u.pass === password);
-    if (!found) return json({ error: "Usuário ou senha incorretos" }, corsHeaders, 401);
-    return json({ ok: true, role: found.role }, corsHeaders);
-  } catch (e) {
-    return json({ error: "Erro na requisição" }, corsHeaders, 400);
-  }
-}
-
-async function handleLeads(request, env, corsHeaders) {
-  try {
-    const body = await request.json();
-    const { nome, telefone, routerValue, answers, observacao } = body;
-    if (!nome || !telefone || !routerValue) {
-      return json({ ok: false, message: "Nome, telefone e situação são obrigatórios." }, corsHeaders, 400);
+    if (path === "/api/admin/login" && request.method === "POST") {
+      try {
+        const body = await request.json();
+        const foundUser = USERS_DATABASE.find(
+          (u) => u.user === body.username && u.pass === body.password
+        );
+        if (!foundUser) {
+          return new Response(JSON.stringify({ error: "Usuário ou senha incorretos!" }), {
+            status: 401,
+            headers: { "content-type": "application/json;charset=UTF-8" }
+          });
+        }
+        return new Response(JSON.stringify({ ok: true, role: foundUser.role }), {
+          status: 200,
+          headers: { "content-type": "application/json;charset=UTF-8" }
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ error: "Erro na requisição" }), { status: 400 });
+      }
     }
-    const benefitKey = resolveBenefitKey(routerValue);
-    const config = getBenefitConfig(benefitKey);
-    if (!config) {
-      return json({ ok: false, message: "Situação não reconhecida." }, corsHeaders, 400);
+    if (path === "/api/leads" && request.method === "POST") {
+      try {
+        const body = await request.json();
+        if (env.DB) {
+          await env.DB.prepare(
+            "INSERT INTO leads (name, phone, benefit_type, answers_json, classification, rationale) VALUES (?, ?, ?, ?, ?, ?)"
+          ).bind(
+            body.nome || "Sem nome",
+            body.telefone || "",
+            "triagem",
+            body.resumo || "",
+            "precisa_avaliacao",
+            body.resumo || ""
+          ).run();
+        }
+        return new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { "content-type": "application/json;charset=UTF-8" }
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ ok: false, message: "Erro ao salvar no banco" }), { status: 500 });
+      }
     }
-    const resultado = runTriagem(benefitKey, answers || {});
-    const classificationLabel = CLASSIFICATION_LABELS[resultado.class] || resultado.class;
+    const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PrevConsulta - Triagem Previdenciária</title>
+  <script src="https://cdn.tailwindcss.com"><\/script>
+</head>
+<body class="bg-[#0b132c] text-slate-100 min-h-screen flex items-center justify-center p-4">
 
-    const resumo = montarResumo({
-      nome, telefone, benefitLabel: config.label, routerValue,
-      answers, observacao, resultado, classificationLabel
+  <div class="bg-[#0b132c] text-slate-100 p-8 rounded-xl max-w-xl w-full border border-blue-900/50 shadow-2xl relative overflow-hidden">
+    <div class="absolute inset-0 bg-[linear-gradient(to_right,#1e293b15_1px,transparent_1px),linear-gradient(to_bottom,#1e293b15_1px,transparent_1px)] bg-[size:14px_24px]"></div>
+    
+    <div class="relative z-10">
+      <div class="border-b border-blue-900/40 pb-4 mb-6 flex justify-between items-center">
+        <div>
+          <span class="text-blue-400 text-xs font-mono tracking-widest uppercase">// SIMULAÇÃO PREVIDENCIÁRIA</span>
+          <h2 class="text-2xl font-bold mt-1 text-white">Análise Preliminar de Benefício</h2>
+        </div>
+        <button onclick="abrirLoginModal()" class="text-xs text-slate-400 hover:text-blue-400 font-mono underline">Área Restrita</button>
+      </div>
+
+      <form id="form-triagem" class="space-y-4" onsubmit="processarTriagem(event)">
+        <div>
+          <label class="block text-xs font-mono text-slate-300 uppercase mb-1">Nome Completo</label>
+          <input type="text" id="nome" required placeholder="Digite seu nome" class="w-full bg-[#132043] border border-blue-800/50 rounded-lg p-2.5 text-white text-sm outline-none focus:border-blue-500">
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-mono text-slate-300 uppercase mb-1">Sexo Biológico</label>
+            <select id="sexo" class="w-full bg-[#132043] border border-blue-800/50 rounded-lg p-2.5 text-white text-sm outline-none focus:border-blue-500">
+              <option value="M">Masculino</option>
+              <option value="F">Feminino</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-mono text-slate-300 uppercase mb-1">Idade Atual</label>
+            <input type="number" id="idade" required placeholder="Ex: 58" class="w-full bg-[#132043] border border-blue-800/50 rounded-lg p-2.5 text-white text-sm outline-none focus:border-blue-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-mono text-slate-300 uppercase mb-1">Tempo de Contribuição / Trabalhado (Anos)</label>
+          <input type="number" id="tempo" required placeholder="Ex: 25" class="w-full bg-[#132043] border border-blue-800/50 rounded-lg p-2.5 text-white text-sm outline-none focus:border-blue-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-mono text-slate-300 uppercase mb-1">Já contribuiu como MEI ou Trabalhador Rural?</label>
+          <select id="especial" class="w-full bg-[#132043] border border-blue-800/50 rounded-lg p-2.5 text-white text-sm outline-none focus:border-blue-500">
+            <option value="nao">Não, apenas CLT ou Carnê individual</option>
+            <option value="mei">Sim, possui tempo como MEI</option>
+            <option value="rural">Sim, possui tempo Rural/Agricultor</option>
+            <option value="ambos">Ambos (MEI e Rural)</option>
+          </select>
+        </div>
+
+        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition-all text-sm uppercase tracking-wide">
+          Gerar Análise e Enviar no WhatsApp
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL LOGIN PAINEL -->
+  <div id="modal-login" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-[#132043] border border-blue-800 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
+      <h3 class="text-lg font-bold text-white border-b border-blue-800/40 pb-2">Acesso ao Painel</h3>
+      <div>
+        <label class="block text-xs font-mono text-slate-300 mb-1">Usuário</label>
+        <input type="text" id="user-login" class="w-full bg-[#0b132c] border border-blue-800/50 rounded-lg p-2 text-white text-sm outline-none">
+      </div>
+      <div>
+        <label class="block text-xs font-mono text-slate-300 mb-1">Senha</label>
+        <input type="password" id="pass-login" class="w-full bg-[#0b132c] border border-blue-800/50 rounded-lg p-2 text-white text-sm outline-none">
+      </div>
+      <div class="flex gap-2">
+        <button onclick="autenticarUsuario()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-lg font-bold text-xs">Entrar</button>
+        <button onclick="fecharLoginModal()" class="w-full bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-lg font-bold text-xs">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL PAINEL DO ESCRITÓRIO -->
+  <div id="modal-painel" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-[#132043] border border-blue-800 rounded-2xl max-w-md w-full p-6 space-y-6 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-blue-800/40 pb-4">
+        <div>
+          <span class="text-blue-400 text-xs font-mono">// GESTÃO DE ATENDIMENTOS</span>
+          <h3 class="text-lg font-bold text-white">Painel PrevConsulta <span id="user-badge" class="text-xs font-normal text-slate-400"></span></h3>
+        </div>
+        <button onclick="fecharPainel()" class="text-slate-400 hover:text-white font-bold text-xl">✕</button>
+      </div>
+
+      <div class="bg-[#0b132c] p-4 rounded-xl border border-blue-800/40 space-y-3">
+        <label class="block text-xs font-mono text-slate-300 uppercase">Número do WhatsApp do Escritório (com DDD):</label>
+        <div class="flex gap-2">
+          <input type="text" id="cfg-phone" placeholder="5517991087449" class="w-full bg-[#132043] border border-blue-800/50 rounded-lg p-2.5 text-white text-sm outline-none">
+          <button onclick="salvarConfig()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap">Salvar Número</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const DEFAULT_PHONE = "${DEFAULT_PHONE}";
+
+    function abrirLoginModal() { document.getElementById('modal-login').classList.remove('hidden'); }
+    function fecharLoginModal() { document.getElementById('modal-login').classList.add('hidden'); }
+    function fecharPainel() { document.getElementById('modal-painel').classList.add('hidden'); }
+
+    async function autenticarUsuario() {
+      const u = document.getElementById('user-login').value;
+      const p = document.getElementById('pass-login').value;
+
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: u, password: p })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        fecharLoginModal();
+        document.getElementById('user-badge').innerText = '(' + data.role + ')';
+        document.getElementById('cfg-phone').value = localStorage.getItem('office_phone') || DEFAULT_PHONE;
+        document.getElementById('modal-painel').classList.remove('hidden');
+      } else {
+        alert('Usuário ou senha incorretos!');
+      }
+    }
+
+    function salvarConfig() {
+      const num = document.getElementById('cfg-phone').value.trim();
+      if(num) {
+        localStorage.setItem('office_phone', num);
+        alert('Número do WhatsApp salvo com sucesso!');
+        fecharPainel();
+      }
+    }
+
+    async function processarTriagem(e) {
+      e.preventDefault();
+      const nome = document.getElementById('nome').value;
+      const sexo = document.getElementById('sexo').value;
+      const idade = parseInt(document.getElementById('idade').value);
+      const tempo = parseInt(document.getElementById('tempo').value);
+      const especial = document.getElementById('especial').value;
+
+      let msgResumo = \`Olá! Sou \${nome}. Solicito análise de triagem previdenciária.\\n\\n\`;
+      msgResumo += \`- Sexo: \${sexo === 'M' ? 'Masculino' : 'Feminino'}\\n\`;
+      msgResumo += \`- Idade: \${idade} anos\\n\`;
+      msgResumo += \`- Tempo de Contribuição: \${tempo} anos\\n\`;
+      msgResumo += \`- Detalhes Especiais: \${especial.toUpperCase()}\\n\`;
+
+      // Salva no banco de dados SQLite (D1)
+      fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome, telefone: '', resumo: msgResumo })
+      });
+
+      // Redireciona para o WhatsApp do Escritório (Cleiton)
+      const targetPhone = localStorage.getItem('office_phone') || DEFAULT_PHONE;
+      const urlWa = \`https://wa.me/\${targetPhone}?text=\${encodeURIComponent(msgResumo)}\`;
+      window.open(urlWa, '_blank');
+    }
+  <\/script>
+</body>
+</html>`;
+    return new Response(html, {
+      headers: { "content-type": "text/html;charset=UTF-8" }
     });
-
-    if (env.DB) {
-      await env.DB.prepare(
-        `INSERT INTO leads (name, phone, email, benefit_type, answers_json, classification, rationale, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 'novo')`
-      ).bind(
-        nome, telefone, null, benefitKey,
-        JSON.stringify(answers || {}), resultado.class, resultado.rationale
-      ).run();
-    }
-
-    return json({
-      ok: true, resumo,
-      classification: resultado.class,
-      classification_label: classificationLabel,
-      rationale: resultado.rationale
-    }, corsHeaders);
-  } catch (e) {
-    console.error("erro /api/leads:", e);
-    return json({ ok: false, message: "Erro ao salvar: " + e.message }, corsHeaders, 500);
   }
-}
-
-function montarResumo({ nome, telefone, benefitLabel, routerValue, answers, observacao, resultado, classificationLabel }) {
-  const linhas = [
-    `Olá! Sou ${nome} (${telefone}).`,
-    `Situação: ${benefitLabel}${routerValue === "bpc_loas_renovacao" ? " — Renovação/Revisão periódica" : ""}`,
-    ``,
-    ...Object.entries(answers || {}).map(([k, v]) => `- ${k}: ${v}`),
-  ];
-  if (observacao) linhas.push(``, `Observação da pessoa: ${observacao}`);
-  linhas.push(
-    ``,
-    `📋 Resultado da triagem automática: ${classificationLabel}`,
-    `📝 ${resultado.rationale}`,
-    ``,
-    `Este é um resultado inicial e automático — não substitui análise jurídica completa.`
-  );
-  return linhas.join("\n");
-}
-
-async function handleAdminAuth(request, env, handler, corsHeaders) {
-  const auth = request.headers.get("Authorization") || "";
-  const token = auth.replace("Bearer ", "");
-  const validTokens = [env.ADMIN_TOKEN, env.USER1_TOKEN, env.USER2_TOKEN];
-  if (!validTokens.includes(token)) {
-    return json({ error: "Não autorizado" }, corsHeaders, 401);
-  }
-  return handler();
-}
-
-function json(data, corsHeaders, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { "Content-Type": "application/json", ...corsHeaders },
-  });
-}
+};
+export {
+  index_default as default
+};
+//# sourceMappingURL=index.js.map
