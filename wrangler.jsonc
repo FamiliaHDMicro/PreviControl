@@ -1,15 +1,15 @@
 {
   "name": "prevcontrol",
-  "main": "index.js",
-  "compatibility_date": "2026-08-28",
-  "assets": {
-    "directory": "./public"
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:create": "wrangler d1 create prevcontrol-db",
+    "db:migrate": "wrangler d1 migrations apply prevcontrol-db --local && wrangler d1 migrations apply prevcontrol-db --remote",
+    "db:migrate:local": "wrangler d1 migrations apply prevcontrol-db --local"
   },
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "prevcontrole-db",
-      "database_id": "b03bac58-6c5d-436a-8116-a7b14be155e1"
-    }
-  ]
+  "devDependencies": {
+    "wrangler": "^4.123.0"
+  }
 }
